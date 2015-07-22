@@ -5,7 +5,6 @@
 # @param position of axis (top, bottom, left or right)
 # @param range of data values
 guide_axis <- function(at, labels, position="right", theme) {
-  print("guide_axis")
   position <- match.arg(position, c("top", "bottom", "right", "left"))
 
   # Quick fix for conflicts #297 and #118

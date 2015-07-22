@@ -16,22 +16,14 @@
 #' @export
 ggplot_gtable <- function(data) {
 
-  print("ggplot_gtable")
-  # (BJH) Is there any mathematical operation in ggplot_gtable?
-  # (BJH) If not, this function do not work in Spark
-  # (BJH) Maybe this part is just draw grid and tickles on window
   plot <- data$plot
   panel <- data$panel
   data <- data$data
   theme <- plot_theme(plot)
 
   build_grob <- function(layer, layer_data) {
-    print("build_grob")
     if (nrow(layer_data) == 0) return()
 
-    print("dlply")
-    # (BJH) dlply {plyr}
-    # data frame, apply, results into a list
     dlply(layer_data, "PANEL", function(df) {
       panel_i <- match(df$PANEL[1], panel$layout$PANEL)
       layer$make_grob(df, scales = panel$ranges[[panel_i]], cs = plot$coordinates)
@@ -40,7 +32,6 @@ ggplot_gtable <- function(data) {
 
   # helper function return the position of panels in plot_table
   find_panel <- function(table) {
-    print("find_panel")
     layout <- table$layout
     panels <- layout[grepl("^panel", layout$name), , drop = FALSE]
 
@@ -51,7 +42,7 @@ ggplot_gtable <- function(data) {
       l = min(panels$l)
     )
   }
- 
+
   # List by layer, list by panel
   geom_grobs <- Map(build_grob, plot$layers, data)
 
@@ -67,7 +58,7 @@ ggplot_gtable <- function(data) {
   ylabel <- element_render(theme, "axis.title.y", labels$y)
 
   panel_dim <-  find_panel(plot_table)
-  
+
   xlab_height <- grobHeight(xlabel) +
     if (is.null(labels$x)) unit(0, "lines") else unit(0.5, "lines")
   plot_table <- gtable_add_rows(plot_table, xlab_height)
@@ -79,14 +70,14 @@ ggplot_gtable <- function(data) {
   plot_table <- gtable_add_cols(plot_table, ylab_width, pos = 0)
   plot_table <- gtable_add_grob(plot_table, ylabel, name = "ylab",
     l = 1, b = panel_dim$b, t = panel_dim$t, clip = "off")
-  
+
   # Legends
   position <- theme$legend.position
   if (length(position) == 2) {
     coords <- position
     position <- "manual"
   }
-  
+
   legend_box <- if (position != "none") {
     build_guides(plot$scales, plot$layers, plot$mapping, position, theme, plot$guides, plot$labels)
   } else {
@@ -186,18 +177,13 @@ ggplot_gtable <- function(data) {
 #' @export
 #' @method print ggplot
 print.ggplot <- function(x, newpage = is.null(vp), vp = NULL, ...) {
-  print("print.ggplot")
   set_last_plot(x)
-  
   if (newpage) grid.newpage()
 
   data <- ggplot_build(x)
 
   gtable <- ggplot_gtable(data)
   if (is.null(vp)) {
-    # Make a new window on plot window
-    # (BJH) How to make gtable in SparkR operation?
-    # (BJH) Need to analysis gtable
     grid.draw(gtable)
   } else {
     if (is.character(vp)) seekViewport(vp) else pushViewport(vp)
@@ -207,23 +193,10 @@ print.ggplot <- function(x, newpage = is.null(vp), vp = NULL, ...) {
 
   invisible(data)
 }
-
-print.ggplot.SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
-  print("print.ggplot.SparkR")  
-  set_last_plot(x)
-  
-  if(newpage) grid.newpage()
-  
-  data <- ggplot.SparkR_build(x)
-  print("test end")
-}
-
 #' @rdname print.ggplot
 #' @method plot ggplot
 #' @export
 plot.ggplot <- print.ggplot
-
-plot.ggplot.SparkR <- print.ggplot.SparkR
 
 
 #' Generate a ggplot2 plot grob.

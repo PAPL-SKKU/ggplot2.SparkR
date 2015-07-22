@@ -148,10 +148,6 @@ df.grid <- function(a, b) {
 }
 
 quoted_df <- function(data, vars) {
-  print("quoted_df")
-  
-  # (BJH) eval.quoted {plyr}
-  # Evalutes quoted variables in specified environment
   values <- eval.quoted(vars, data, emptyenv(), try = TRUE)
   as.data.frame(compact(values), optional = TRUE)
 }

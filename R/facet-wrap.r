@@ -71,7 +71,6 @@ facet_wrap <- function(facets, nrow = NULL, ncol = NULL, scales = "fixed",
 
 #' @export
 facet_train_layout.wrap <- function(facet, data) {
-  print("facet_train_layout.wrap")
   panels <- layout_wrap(data, facet$facets, facet$nrow, facet$ncol,
      facet$as.table, facet$drop)
 
@@ -91,7 +90,6 @@ facet_train_layout.wrap <- function(facet, data) {
 
 #' @export
 facet_map_layout.wrap <- function(facet, data, layout) {
-  print("facet_map_layout.wrap")
   locate_wrap(data, layout, facet$facets)
 }
 

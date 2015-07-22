@@ -63,8 +63,6 @@
 "+.gg" <- function(e1, e2) {
   # Get the name of what was passed in as e2, and pass along so that it
   # can be displayed in error messages
-  print("+.gg")
-  
   e2name <- deparse(substitute(e2))
 
   if      (is.theme(e1))  add_theme(e1, e2, e2name)
@@ -78,7 +76,6 @@
 
 
 add_ggplot <- function(p, object, objectname) {
-  print("add_ggplot")
   if (is.null(object)) return(p)
 
   p <- plot_clone(p)
@@ -116,10 +113,9 @@ add_ggplot <- function(p, object, objectname) {
         # Add any new labels
         mapping <- make_labels(object$mapping)
         default <- make_labels(object$stat$default_aes())
-        
+
         new_labels <- defaults(mapping, default)
         p$labels <- defaults(p$labels, new_labels)
-
         p
       },
       coord = {

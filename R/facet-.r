@@ -7,7 +7,6 @@
 #' @keywords internal
 #' @export
 facet <- function(..., shrink = TRUE, subclass = c()) {
-  print("facet")
   structure(list(..., shrink = shrink), class = c(subclass, "facet"))
 }
 

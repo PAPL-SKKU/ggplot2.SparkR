@@ -93,7 +93,6 @@ is.ggplot <- function(x) inherits(x, "ggplot")
 #' @method ggplot data.frame
 #' @export
 ggplot.data.frame <- function(data, mapping=aes(), ..., environment = parent.frame()) {
-  print("ggplot.data.frame")
   if (!missing(mapping) && !inherits(mapping, "uneval")) stop("Mapping should be created with aes or aes_string")
 
   p <- structure(list(
@@ -113,32 +112,9 @@ ggplot.data.frame <- function(data, mapping=aes(), ..., environment = parent.fra
   p
 }
 
-ggplot.DataFrame <- function(df, mapping=aes(), ..., environment = parent.frame()) {
-  print("ggplot.DataFrame")
-  
-  p <- structure(list(
-    data = df,
-    layers = list(),
-    scales = Scales$new(),
-    mapping = mapping,
-    theme = list(),
-    coordinates = coord_cartesian(),
-    facet = facet_null(),
-    plot_env = environment
-  ), class = c("gg", "ggplot.SparkR", "ggplot"))
-  
-  p$labels <- make_labels(mapping)
-  
-  set_last_plot(p)
-  p
-}
-
 plot_clone <- function(plot) {
-  print("plot_clone")
   p <- plot
   p$scales <- plot$scales$clone()
-  
-  print("lapply")
   p$layers <- lapply(plot$layers, function(x) x$clone())
 
   p

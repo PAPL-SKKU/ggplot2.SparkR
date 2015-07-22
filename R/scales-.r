@@ -103,7 +103,7 @@ scales_add_defaults <- function(scales, data, aesthetics, env) {
 # Add missing but required scales.
 # @param aesthetics A character vector of aesthetics. Typically c("x", "y").
 scales_add_missing <- function(plot, aesthetics, env) {
-  print("scales_add_missing")
+
   # Keep only aesthetics that aren't already in plot$scales
   aesthetics <- setdiff(aesthetics, plot$scales$input())
 

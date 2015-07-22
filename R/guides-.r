@@ -89,7 +89,7 @@ update_guides <- function(p, guides) {
 #      arrange all ggrobs
 
 build_guides <- function(scales, layers, default_mapping, position, theme, guides, labels) {
-  print("build_guides")
+
   # set themes w.r.t. guides
   # should these theme$legend.XXX be renamed to theme$guide.XXX ?
 
@@ -149,7 +149,7 @@ validate_guide <- function(guide) {
 
 # train each scale in scales and generate the definition of guide
 guides_train <- function(scales, theme, guides, labels) {
-  print("guides_train")
+
   gdefs <- list()
   for(scale in scales$scales) {
 
@@ -190,7 +190,6 @@ guides_train <- function(scales, theme, guides, labels) {
 
 # merge overlapped guides
 guides_merge <- function(gdefs) {
-  print("guides_merge")
   # split gdefs based on hash, and apply Reduce (guide_merge) to each gdef groug.
   gdefs <- lapply(gdefs, function(g) {
     if (g$order == 0) {
@@ -206,13 +205,11 @@ guides_merge <- function(gdefs) {
 
 # process layer information
 guides_geom <- function(gdefs, layers, default_mapping) {
-  print("guides_geom")
   compact(lapply(gdefs, guide_geom, layers, default_mapping))
 }
 
 # generate grob from each gdef (needs to write this function?)
 guides_gengrob <- function(gdefs, theme) {
-  print("guides_gengrob")
   # common drawing process for all guides
   gdefs <- lapply(gdefs,
     function(g) {
@@ -226,7 +223,7 @@ guides_gengrob <- function(gdefs, theme) {
 
 # build up all guide boxes into one guide-boxes.
 guides_build <- function(ggrobs, theme) {
-  print("guides_build")
+
   n <- length(ggrobs)
 
   theme$guide.margin <- theme$guide.margin %||% unit(0.5, "lines")

@@ -99,7 +99,6 @@
 #' }
 geom_point <- function (mapping = NULL, data = NULL, stat = "identity", position = "identity",
 na.rm = FALSE, ...) {
-  print("geom_point")
   GeomPoint$new(mapping = mapping, data = data, stat = stat, position = position,
   na.rm = na.rm, ...)
 }

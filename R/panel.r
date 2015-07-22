@@ -8,7 +8,6 @@
 # Information about a panel is built up progressively over time, which
 # is why the initial object is empty to start with.
 new_panel <- function() {
-  print("new_panel")
   structure(list(), class = "panel")
 }
 
@@ -28,7 +27,6 @@ new_panel <- function() {
 # @param plot_data the default data frame
 # @return an updated panel object
 train_layout <- function(panel, facet, data, plot_data) {
-  print("train_layout")
   layout <- facet_train_layout(facet, c(list(plot_data), data))
   panel$layout <- layout
   panel$shrink <- facet$shrink
@@ -49,8 +47,6 @@ train_layout <- function(panel, facet, data, plot_data) {
 # @param data list of data frames (one for each layer)
 # @param plot_data default plot data frame
 map_layout <- function(panel, facet, data, plot_data) {
-  print("map_layout")
-  print("lapply")
   lapply(data, function(data) {
     if (is.waive(data)) data <- plot_data
     facet_map_layout(facet, data, panel$layout)
@@ -67,23 +63,16 @@ map_layout <- function(panel, facet, data, plot_data) {
 # @param x_scale x scale for the plot
 # @param y_scale y scale for the plot
 train_position <- function(panel, data, x_scale, y_scale) {
-  print("train_position")
   # Initialise scales if needed, and possible.
   layout <- panel$layout
   if (is.null(panel$x_scales) && !is.null(x_scale)) {
-    print("rlply")
-    # (BJH) rlply {plyr}
-    # Evaluate expression n times then combine results into a list
     panel$x_scales <- rlply(max(layout$SCALE_X), scale_clone(x_scale))
   }
   if (is.null(panel$y_scales) && !is.null(y_scale)) {
-    # (BJH) rlply {plyr}
-    # Evaluate expression n times then combine results into a list
     panel$y_scales <- rlply(max(layout$SCALE_Y), scale_clone(y_scale))
   }
 
   # loop over each layer, training x and y scales in turn
-  i <- 0
   for(layer_data in data) {
 
     match_id <- match(layer_data$PANEL, layout$PANEL)
@@ -91,28 +80,24 @@ train_position <- function(panel, data, x_scale, y_scale) {
     if (!is.null(x_scale)) {
       x_vars <- intersect(x_scale$aesthetics, names(layer_data))
       SCALE_X <- layout$SCALE_X[match_id]
+
       scale_apply(layer_data, x_vars, scale_train, SCALE_X, panel$x_scales)
     }
 
     if (!is.null(y_scale)) {
       y_vars <- intersect(y_scale$aesthetics, names(layer_data))
       SCALE_Y <- layout$SCALE_Y[match_id]
+
       scale_apply(layer_data, y_vars, scale_train, SCALE_Y, panel$y_scales)
     }
-    i <- i+1
   }
-  
+
   panel
 }
 
 
 reset_scales <- function(panel) {
-  print("reset_scales")
   if (!panel$shrink) return()
-  
-  print("l_ply")
-  # (BJH) l_ply {plyr}
-  # For each element of a list, apply function and discard results
   l_ply(panel$x_scales, scale_reset)
   l_ply(panel$y_scales, scale_reset)
 }
@@ -124,10 +109,8 @@ reset_scales <- function(panel) {
 #
 # @param data a list of data frames (one for each layer)
 map_position <- function(panel, data, x_scale, y_scale) {
-  print("map_position")
   layout <- panel$layout
 
-  print("lapply")
   lapply(data, function(layer_data) {
     match_id <- match(layer_data$PANEL, layout$PANEL)
 
@@ -155,18 +138,14 @@ map_position <- function(panel, data, x_scale, y_scale) {
 # data set.  Implement in such a way to minimise copying and hence maximise
 # speed
 scale_apply <- function(data, vars, f, scale_id, scales) {
-  print("scale_apply")
   if (length(vars) == 0) return()
   if (nrow(data) == 0) return()
 
   n <- length(scales)
   if (any(is.na(scale_id))) stop()
 
-  # (BJH) split_indices {plyr}
-  # An optimised version of split for the special case of splitting row indices into groups, as used by splitter_d
   scale_index <- split_indices(scale_id, n)
 
-  print("lapply")
   lapply(vars, function(var) {
     pieces <- lapply(seq_along(scales), function(i) {
       f(scales[[i]], data[[var]][scale_index[[i]]])
@@ -190,7 +169,6 @@ panel_scales <- function(panel, i) {
 
 # Compute ranges and dimensions of each panel, using the coord.
 train_ranges <- function(panel, coord) {
-  print("train_ranges")
   compute_range <- function(ix, iy) {
     # TODO: change coord_train method to take individual x and y scales
     coord_train(coord, list(x = panel$x_scales[[ix]], y = panel$y_scales[[iy]]))
@@ -206,13 +184,11 @@ train_ranges <- function(panel, coord) {
 # @param layers list of layers
 # @param data a list of data frames (one for each layer)
 calculate_stats <- function(panel, data, layers) {
-  print("calculate_stats")
-  print("lapply")
+
   lapply(seq_along(data), function(i) {
     d <- data[[i]]
     l <- layers[[i]]
 
-    print("ddply")
     ddply(d, "PANEL", function(panel_data) {
       scales <- panel_scales(panel, panel_data$PANEL[1])
       l$calc_statistic(panel_data, scales)
@@ -222,11 +198,9 @@ calculate_stats <- function(panel, data, layers) {
 
 
 xlabel <- function(panel, labels) {
-  print("xlabel")
   panel$x_scales[[1]]$name %||% labels$x
 }
 
 ylabel <- function(panel, labels) {
-  print("ylabel")
   panel$y_scales[[1]]$name %||% labels$y
 }

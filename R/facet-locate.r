@@ -4,13 +4,10 @@
 #
 # @params data a data frame
 locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE) {
-  print("locate_grid")
   if (empty(data)) {
     return(cbind(data, PANEL = integer(0)))
   }
 
-  # (BJH) as.quoted {plyr}
-  # Convert characters, formulas and calls to quoted .variables
   rows <- as.quoted(rows)
   cols <- as.quoted(cols)
   vars <- c(names(rows), names(cols))
@@ -18,9 +15,6 @@ locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE)
   # Compute facetting values and add margins
   margin_vars <- list(intersect(names(rows), names(data)),
     intersect(names(cols), names(data)))
-  
-  # (BJH) add_margins {reshape2}
-  # Rownames are silently stripped.
   data <- add_margins(data, margin_vars, margins)
 
   facet_vals <- quoted_df(data, c(rows, cols))
@@ -45,12 +39,9 @@ locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE)
     # Special case of no facetting
     data$PANEL <- 1
   } else {
-    print("lapply")
     facet_vals[] <- lapply(facet_vals[], as.factor)
     facet_vals[] <- lapply(facet_vals[], addNA, ifany = TRUE)
 
-    # (BJH) join.keys {plyr}
-    # Join keys. Given two data frames, create a unique key for each row.
     keys <- join.keys(facet_vals, panels, by = vars)
 
     data$PANEL <- panels$PANEL[match(keys$x, keys$y)]
@@ -60,14 +51,12 @@ locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE)
 }
 
 locate_wrap <- function(data, panels, vars) {
-  print("locate_wrap")
   if (empty(data)) {
     return(cbind(data, PANEL = integer(0)))
   }
   vars <- as.quoted(vars)
 
   facet_vals <- quoted_df(data, vars)
-  print("lapply")
   facet_vals[] <- lapply(facet_vals[], as.factor)
 
   missing_facets <- setdiff(names(vars), names(facet_vals))

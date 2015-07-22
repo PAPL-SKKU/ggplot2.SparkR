@@ -22,7 +22,6 @@ element_blank <- function() {
 element_rect <- function(fill = NULL, colour = NULL, size = NULL,
   linetype = NULL, color = NULL) {
 
-  print("element_rect")
   if (!is.null(color))  colour <- color
   structure(
     list(fill = fill, colour = colour, size = size, linetype = linetype),
@@ -41,7 +40,6 @@ element_rect <- function(fill = NULL, colour = NULL, size = NULL,
 element_line <- function(colour = NULL, size = NULL, linetype = NULL,
   lineend = NULL, color = NULL) {
 
-  print("element_line")
   if (!is.null(color))  colour <- color
   structure(
     list(colour = colour, size = size, linetype = linetype, lineend = lineend),
@@ -66,7 +64,6 @@ element_text <- function(family = NULL, face = NULL, colour = NULL,
   size = NULL, hjust = NULL, vjust = NULL, angle = NULL, lineheight = NULL,
   color = NULL) {
 
-  print("element_text")
   if (!is.null(color))  colour <- color
   structure(
     list(family = family, face = face, colour = colour, size = size,
@@ -103,7 +100,6 @@ is.rel <- function(x) inherits(x, "rel")
 # Given a theme object and element name, return a grob for the element
 element_render <- function(theme, element, ..., name = NULL) {
 
-  print("element_render")
   # Get the element from the theme, calculating inheritance
   el <- calc_element(element, theme)
   if (is.null(el)) {
@@ -128,20 +124,14 @@ element_grob <- function(element, ...)
 
 
 #' @export
-element_grob.element_blank <- function(element, ...) {
-  print("element_grob.element_blank")
-  zeroGrob()
-} 
+element_grob.element_blank <- function(element, ...)  zeroGrob()
 
 #' @export
 element_grob.element_rect <- function(element, x = 0.5, y = 0.5,
   width = 1, height = 1,
   fill = NULL, colour = NULL, size = NULL, linetype = NULL, ...) {
 
-  print("element_grob.element_rect")
   # The gp settings can override element_gp
-  # (BJH) gpar {grid}
-  # create a set of graphical parameter settings
   gp <- gpar(lwd = len0_null(size * .pt), col = colour, fill = fill, lty = linetype)
   element_gp <- gpar(lwd = len0_null(element$size * .pt), col = element$colour,
     fill = element$fill, lty = element$linetype)
@@ -156,7 +146,6 @@ element_grob.element_text <- function(element, label = "", x = NULL, y = NULL,
   hjust = NULL, vjust = NULL, angle = NULL, lineheight = NULL,
   default.units = "npc", ...) {
 
-  print("element_grob.element_text")
   vj <- vjust %||% element$vjust
   hj <- hjust %||% element$hjust
 
@@ -205,7 +194,6 @@ element_grob.element_line <- function(element, x = 0:1, y = 0:1,
   colour = NULL, size = NULL, linetype = NULL, lineend = NULL,
   default.units = "npc", id.lengths = NULL, ...) {
 
-  print("element_grob.element_line")
   # The gp settings can override element_gp
   gp <- gpar(lwd=len0_null(size * .pt), col=colour, lty=linetype, lineend = lineend)
   element_gp <- gpar(lwd = len0_null(element$size * .pt), col = element$colour,
@@ -228,7 +216,6 @@ element_grob.element_line <- function(element, x = 0:1, y = 0:1,
 # @param inherit A vector of strings, naming the elements that this
 #  element inherits from.
 el_def <- function(class = NULL, inherit = NULL, description = NULL) {
-  print("el_def")
   list(class = class, inherit = inherit, description = description)
 }
 
@@ -309,7 +296,6 @@ el_def <- function(class = NULL, inherit = NULL, description = NULL) {
 # @param el an element
 # @param elname the name of the element
 validate_element <- function(el, elname) {
-  print("validate_element")
   eldef <- .element_tree[[elname]]
 
   if (is.null(eldef)) {

@@ -76,15 +76,12 @@
 #' qplot(mpg, data = mtcars, geom = "dotplot")
 #' }
 qplot <- function(x, y = NULL, ..., data, facets = NULL, margins=FALSE, geom = "auto", stat=list(NULL), position=list(NULL), xlim = c(NA, NA), ylim = c(NA, NA), log = "", main = NULL, xlab = deparse(substitute(x)), ylab = deparse(substitute(y)), asp = NA) {
-  print("qplot")
+
   argnames <- names(as.list(match.call(expand.dots=FALSE)[-1]))
   arguments <- as.list(match.call()[-1])
-  
-  # (BJH) compact{plyr}
-  # (BJH) Remove all NULL entries from a list
+
   aesthetics <- compact(arguments[.all_aesthetics])
   aesthetics <- aesthetics[!is.constant(aesthetics)]
-
   aes_names <- names(aesthetics)
   aesthetics <- rename_aes(aesthetics)
   class(aesthetics) <- "uneval"
@@ -119,7 +116,7 @@ qplot <- function(x, y = NULL, ..., data, facets = NULL, margins=FALSE, geom = "
 
   env <- parent.frame()
   p <- ggplot(data, aesthetics, environment = env)
-  
+
   if (is.null(facets)) {
     p <- p + facet_null()
   } else if (is.formula(facets) && length(facets) == 2) {
@@ -133,7 +130,6 @@ qplot <- function(x, y = NULL, ..., data, facets = NULL, margins=FALSE, geom = "
   # Add geoms/statistics
   if (is.proto(position)) position <- list(position)
 
-  print("mapply")
   mapply(function(g, s, ps) {
     if(is.character(g)) g <- Geom$find(g)
     if(is.character(s)) s <- Stat$find(s)
@@ -159,14 +155,12 @@ qplot <- function(x, y = NULL, ..., data, facets = NULL, margins=FALSE, geom = "
 
   if (!missing(xlim)) p <- p + xlim(xlim)
   if (!missing(ylim)) p <- p + ylim(ylim)
-#  stop("Test for SparkR")
+
   p
 }
 quickplot <- qplot
 
 # is.constant
-# match x elements (arguments of qplot) and I, return true, else false.
-# (BJH) Why?
 is.constant <- function(x) {
   sapply(x, function(x) "I" %in% all.names(asOneSidedFormula(x)))
 }

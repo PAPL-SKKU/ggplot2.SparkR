@@ -32,21 +32,18 @@ coord_labels.default <- function(coord, scales) scales
 coord_render_fg <- function(coord, scales, theme)
   UseMethod("coord_render_fg")
 #' @export
-coord_render_fg.default <- function(coord, scales, theme) {
-  print("coord_render_fg.default")
+coord_render_fg.default <- function(coord, scales, theme)
   element_render(theme, "panel.border")
-}
 
 coord_render_bg <- function(coord, scales, theme)
   UseMethod("coord_render_bg")
 #' @export
 coord_render_bg.default <- function(coord, details, theme) {
-  print("coord_render_bg.default")
   x.major <- if(length(details$x.major) > 0) unit(details$x.major, "native")
   x.minor <- if(length(details$x.minor) > 0) unit(details$x.minor, "native")
   y.major <- if(length(details$y.major) > 0) unit(details$y.major, "native")
   y.minor <- if(length(details$y.minor) > 0) unit(details$y.minor, "native")
-  
+
   guide_grid(theme, x.minor, x.major, y.minor, y.major)
 }
 
@@ -54,7 +51,6 @@ coord_render_axis_h <- function(coord, scales, theme)
   UseMethod("coord_render_axis_h")
 #' @export
 coord_render_axis_h.default <- function(coord, details, theme) {
-  print("coord_render_axis_h.default")
   guide_axis(details$x.major, details$x.labels, "bottom", theme)
 }
 
@@ -62,7 +58,6 @@ coord_render_axis_v <- function(coord, scales, theme)
   UseMethod("coord_render_axis_v")
 #' @export
 coord_render_axis_v.default <- function(coord, details, theme) {
-  print("coord_render_axis_v.default")
   guide_axis(details$y.major, details$y.labels, "left", theme)
 }
 
@@ -71,7 +66,6 @@ coord_range <- function(coord, scales)
 
 #' @export
 coord_range.default <- function(coord, scales) {
-  print("coord_range.default")
   return(list(x = scales$x.range, y = scales$y.range))
 }
 

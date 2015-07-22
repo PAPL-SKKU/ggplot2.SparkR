@@ -27,7 +27,6 @@
 #' last_plot() +
 #'  theme(legend.background = element_rect(fill = "white", colour = "white", size = 3))
 theme_update <- function(...) {
-  print("theme_update")
   # Make a call to theme, then add to theme
   theme_set(theme_get() %+replace% do.call(theme, list(...)))
 }
@@ -330,11 +329,9 @@ print.theme <- function(x, ...) str(x)
 #'
 #' }
 theme <- function(..., complete = FALSE) {
-  print("theme")
   elements <- list(...)
 
   # Check that all elements have the correct class (element_text, unit, etc)
-  print("mapply")
   mapply(validate_element, elements, names(elements))
 
   structure(elements, class = c("theme", "gg"), complete = complete)
@@ -343,7 +340,6 @@ theme <- function(..., complete = FALSE) {
 
 # Combine plot defaults with current theme to get complete theme for a plot
 plot_theme <- function(x) {
-  print("plot_theme")
   defaults(x$theme, theme_get())
 }
 
@@ -380,7 +376,6 @@ theme_set <- .theme$set
 #' @rdname gg-add
 #' @export
 "%+replace%" <- function(e1, e2) {
-  print("%+replace")
   if (!is.theme(e1) || !is.theme(e2)) {
     stop("%+replace% requires two theme objects", call. = FALSE)
   }
@@ -401,7 +396,6 @@ theme_set <- .theme$set
 #' @seealso +.gg
 #'
 add_theme <- function(t1, t2, t2name) {
-  print("add_theme")
   if (!is.theme(t2)) {
     stop("Don't know how to add ", t2name, " to a theme object",
       call. = FALSE)
@@ -465,7 +459,6 @@ add_theme <- function(t1, t2, t2name) {
 #   plot$theme. This could be an empty list.
 # @param newtheme a new theme object to add to the existing theme
 update_theme <- function(oldtheme, newtheme) {
-  print("update_theme")
   # If the newtheme is a complete one, don't bother searching
   # the default theme -- just replace everything with newtheme
   if (attr(newtheme, "complete"))
@@ -508,7 +501,6 @@ update_theme <- function(oldtheme, newtheme) {
 #'
 #' @export
 calc_element <- function(element, theme, verbose = FALSE) {
-  print("calc_element")
   if (verbose) message(element, " --> ", appendLF = FALSE)
 
   # If this is element_blank, don't inherit anything from parents
@@ -554,7 +546,7 @@ calc_element <- function(element, theme, verbose = FALSE) {
 # @param e1 An element object
 # @param e2 An element object which e1 inherits from
 combine_elements <- function(e1, e2) {
-  print("combine_elements")
+
   # If e2 is NULL, nothing to inherit
   if (is.null(e2))  return(e1)
 

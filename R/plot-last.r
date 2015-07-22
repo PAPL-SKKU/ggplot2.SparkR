@@ -1,5 +1,4 @@
 .plot_store <- function() {
-  print(".plot_store")
   .last_plot <- NULL
 
   list(
@@ -10,10 +9,7 @@
 .store <- .plot_store()
 
 # Set last plot created or modified
-set_last_plot <- function(value) {
-  print("set_last_plot")
-  .store$set(value)
-}
+set_last_plot <- function(value) .store$set(value)
 
 
 #' Retrieve the last plot to be modified or created.

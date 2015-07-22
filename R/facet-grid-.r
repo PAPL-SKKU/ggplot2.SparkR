@@ -209,7 +209,6 @@ facet_grid <- function(facets, margins = FALSE, scales = "fixed", space = "fixed
 
 #' @export
 facet_train_layout.grid <- function(facet, data) {
-  print("facet_train_layout.grid")
   layout <- layout_grid(data, facet$rows, facet$cols, facet$margins,
     drop = facet$drop, as.table = facet$as.table)
 
@@ -223,7 +222,6 @@ facet_train_layout.grid <- function(facet, data) {
 
 #' @export
 facet_map_layout.grid <- function(facet, data, layout) {
-  print("facet_map_layout.grid")
   locate_grid(data, layout, facet$rows, facet$cols, facet$margins)
 }
 

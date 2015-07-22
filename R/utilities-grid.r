@@ -3,10 +3,6 @@
 #
 # @keyword internal
 ggname <- function(prefix, grob) {
-  print("ggname")
-  
-  # (BJH) grobName {grid}
-  # Generates a unique name for a grob, based on the grob's class
   grob$name <- grobName(grob, prefix)
   grob
 }

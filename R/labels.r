@@ -40,7 +40,6 @@ update_labels <- function(p, labels) {
 #' # Can also pass in a list, if that is more convenient
 #' p + labs(list(title = "Title", x = "X", y = "Y"))
 labs <- function(...) {
-  print("labs")
   args <- list(...)
   if (is.list(args[[1]])) args <- args[[1]]
   args <- rename_aes(args)
@@ -50,29 +49,24 @@ labs <- function(...) {
 #' @rdname labs
 #' @export
 xlab <- function(label) {
-  print("xlab")
   labs(x = label)
 }
 #' @rdname labs
 #' @export
 ylab <- function(label) {
-  print("ylab")
   labs(y = label)
 }
 #' @rdname labs
 #' @export
 ggtitle <- function(label) {
-  print("ggtitle")
   labs(title = label)
 }
 
 # Convert aesthetic mapping into text labels
 make_labels <- function(mapping) {
-  print("make_labels")
   remove_dots <- function(x) {
     gsub(match_calculated_aes, "\\1", x)
   }
 
-  print("lapply")
   lapply(mapping, function(x) remove_dots(deparse(x)))
 }
