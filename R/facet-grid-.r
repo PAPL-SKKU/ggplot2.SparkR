@@ -209,13 +209,20 @@ facet_grid <- function(facets, margins = FALSE, scales = "fixed", space = "fixed
 
 #' @export
 facet_train_layout.grid <- function(facet, data) {
-  layout <- layout_grid(data, facet$rows, facet$cols, facet$margins,
-    drop = facet$drop, as.table = facet$as.table)
+  data_class <- class(data[1][[1]])
+  if(length(grep("DataFrame", data_class)) == 0) {
+    layout <- layout_grid(data, facet$rows, facet$cols, facet$margins,
+			  drop = facet$drop, as.table = facet$as.table)
+    # Relax constraints, if necessary
+    layout$SCALE_X <- if (facet$free$x) layout$COL else 1L
+    layout$SCALE_Y <- if (facet$free$y) layout$ROW else 1L
+  } else {
+    layout <- layout.SparkR_grid(data, facet$rows, facet$cols, facet$margins,
+				drop = facet$drop, as.table = facet$as.table)
 
-  # Relax constraints, if necessary
-  layout$SCALE_X <- if (facet$free$x) layout$COL else 1L
-  layout$SCALE_Y <- if (facet$free$y) layout$ROW else 1L
-
+    
+  }
+  
   layout
 }
 

@@ -17,7 +17,7 @@ ggplot_build <- function(plot) {
   plot <- plot_clone(plot)
   layers <- plot$layers
   layer_data <- lapply(layers, function(y) y$data)
-
+  
   scales <- plot$scales
   # Apply function to layer and matching data
   dlapply <- function(f) {
@@ -84,3 +84,15 @@ ggplot_build <- function(plot) {
   list(data = data, panel = panel, plot = plot)
 }
 
+ggplot.SparkR_build <- function(plot) {
+  if(length(plot$layers)==0) stop("No layers in plot", call.=FALSE)
+
+  plot <- plot_clone(plot)
+  layers <- plot$layers
+  layer_data <- lapply(layers, function(y) y$data)
+
+  panel <- new_panel()
+  panel <- train_layout(panel, plot$facet, layer_data, plot$data)
+
+  print(panel)
+}
