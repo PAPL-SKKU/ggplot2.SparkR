@@ -50,6 +50,7 @@ layout.SparkR_grid <- function(data, rows = NULL, cols = NULL, margins = NULL, d
 
   data <- data[1][[1]]
 
+  # Set unique number for ROW grid
   if(!rows_is_null) {
     rows_distinct <- distinct(select(data, eval(rows_char)))
     rows <- withColumn(rows_distinct, "ROW_init", cast(isNull(rows_distinct[[eval(rows_char)]]), "integer"))
@@ -63,9 +64,10 @@ layout.SparkR_grid <- function(data, rows = NULL, cols = NULL, margins = NULL, d
       index <- index + 1
     }
 
-    rows <- select(unioned, "ROW", eval(row_char))
+    rows <- select(unioned, "ROW", eval(rows_char))
   }
 
+  # Set unique number for COL grid
   if(!cols_is_null) {
     cols_distinct <- distinct(select(data, eval(cols_char)))
     cols <- withColumn(cols_distinct, "COL_init", cast(isNull(cols_distinct[[eval(cols_char)]]), "integer"))
@@ -81,7 +83,8 @@ layout.SparkR_grid <- function(data, rows = NULL, cols = NULL, margins = NULL, d
 
     cols <- select(unioned, "COL", eval(cols_char))
   }
-  
+ 
+  # Create PANEL info dataset
   if(!rows_is_null && !cols_is_null) {
     panels <- SparkR::join(rows, cols)
     panels <- withColumn(panels, "PANEL", (panels$ROW - 1) * length(cols_value) + panels$COL)

@@ -209,7 +209,7 @@ print.ggplot.SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
 
   data <- ggplot.SparkR_build(x)
 
-  invisible(data)
+  showDF(data)
 }
 #' @rdname print.ggplot
 #' @method plot ggplot
