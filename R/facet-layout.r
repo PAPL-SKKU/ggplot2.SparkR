@@ -49,53 +49,59 @@ layout.SparkR_grid <- function(data, rows = NULL, cols = NULL, margins = NULL, d
   cols_is_null <- length(cols_char) == 0
 
   data <- data[1][[1]]
-
+  
   # Set unique number for ROW grid
-  if(!rows_is_null) {
-    rows_distinct <- distinct(select(data, eval(rows_char)))
-    rows <- withColumn(rows_distinct, "ROW_init", cast(isNull(rows_distinct[[eval(rows_char)]]), "integer"))
-    rows_value <- collect(select(rows, eval(rows_char)))[[1]]
-    index <- 1
-
-    for(value in rows_value) {
-      temp_df <- withColumn(filter(rows, rows[[eval(rows_char)]] == value), "ROW", rows$ROW_init + index)
-      if(index > 1) unioned <- unionAll(unioned, temp_df)
-      else          unioned <- temp_df
-      index <- index + 1
-    }
-
-    rows <- select(unioned, "ROW", eval(rows_char))
-  }
+  if(!rows_is_null) rows <- distinct(select(data, eval(rows_char)))
 
   # Set unique number for COL grid
-  if(!cols_is_null) {
-    cols_distinct <- distinct(select(data, eval(cols_char)))
-    cols <- withColumn(cols_distinct, "COL_init", cast(isNull(cols_distinct[[eval(cols_char)]]), "integer"))
-    cols_value <- collect(select(cols, eval(cols_char)))[[1]]
-    index <- 1
-
-    for(value in cols_value) {
-      temp_df <- withColumn(filter(cols, cols[[eval(cols_char)]] == value), "COL", cols$COL_init + index)
-      if(index > 1) unioned <- unionAll(unioned, temp_df)
-      else          unioned <- temp_df
-      index <- index + 1
-    }
-
-    cols <- select(unioned, "COL", eval(cols_char))
-  }
+  if(!cols_is_null) cols <- distinct(select(data, eval(cols_char)))
  
   # Create PANEL info dataset
   if(!rows_is_null && !cols_is_null) {
     panels <- SparkR::join(rows, cols)
-    panels <- withColumn(panels, "PANEL", (panels$ROW - 1) * length(cols_value) + panels$COL)
+    panels <- withColumn(panels, "init", cast(isNull(panels[[1]]), "integer"))
+   
+    value_row <- collect(select(panels, eval(rows_char)))[[1]]
+    value_col <- collect(select(panels, eval(cols_char)))[[1]]
+
+    for(index in 1:length(value_row)) {
+      temp_df <- filter(panels, panels[[eval(rows_char)]] == value_row[index] &
+                                panels[[eval(cols_char)]] == value_col[index])
+      temp_df <- withColumn(temp_df, "PANEL", temp_df$init + index)
+      
+      if(index > 1) unioned <- unionAll(unioned, temp_df)
+      else          unioned <- temp_df
+    }
+
+    panels <- select(unioned, eval(rows_char), eval(cols_char), "PANEL")
   } else if(!rows_is_null) {
-    panels <- withColumn(rows, "COL", rows$ROW/rows$ROW)
-    panels <- withColumn(panels, "PANEL", rows$ROW)
+    panels <- withColumn(rows, "init", cast(isNull(rows[[1]]), "integer"))
+    value_row <- collect(select(panels, eval(rows_char)))[[1]]
+    
+    for(index in 1:length(value_row)) {
+      temp_df <- filter(panels, panels[[eval(rows_char)]] == value_row[index])
+      temp_df <- withColumn(temp_df, "PANEL", temp_df$init + index)
+      
+      if(index > 1) unioned <- unionAll(unioned, temp_df)
+      else          unioned <- temp_df
+    }
+
+    panels <- select(unioned, eval(rows_char), "PANEL")
   } else if(!cols_is_null) {
-    panels <- withColumn(cols, "PANEL", cols$COL)
-    panels <- withColumn(panels, "ROW", cols$COL/cols$COL)
+    panels <- withColumn(cols, "init", cast(isNull(cols[[1]]), "integer"))
+    value_col <- collect(select(panels, eval(cols_char)))[[1]]
+    
+    for(index in 1:length(value_col)) {
+      temp_df <- filter(panels, panels[[eval(cols_char)]] == value_col[index])
+      temp_df <- withColumn(temp_df, "PANEL", temp_df$init + index)
+      
+      if(index > 1) unioned <- unionAll(unioned, temp_df)
+      else          unioned <- temp_df
+    }
+
+    panels <- select(unioned, eval(cols_char), "PANEL")
   }
-  
+
   panels
 }
 
@@ -108,7 +114,6 @@ layout_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = 
   if (length(vars) == 0) return(layout_null())
 
   base <- unrowname(layout_base(data, vars, drop = drop))
-
   id <- id(base, drop = TRUE)
   n <- attr(id, "n")
 
@@ -121,10 +126,58 @@ layout_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = 
     layout$ROW <- as.integer(dims[1] - (id - 1L) %/% dims[2])
   }
   layout$COL <- as.integer((id - 1L) %% dims[2] + 1L)
-
+  
   panels <- cbind(layout, unrowname(base))
   panels <- panels[order(panels$PANEL), , drop = FALSE]
   rownames(panels) <- NULL
+  
+  panels
+}
+
+layout.SparkR_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = TRUE, drop = TRUE) {
+  vars <- as.character(unlist(vars))
+  if(length(vars) == 0) stop("Error: No variable for calculate")
+
+  data <- data[1][[1]]
+  base <- select(data, eval(vars))
+  base <- distinct(base, eval(vars))
+
+  n <- collect(select(base, countDistinct(base[[eval(vars)]])))[[1]]
+  dims <- wrap_dims(n, nrow, ncol)
+  
+  base <- withColumn(base, "init", cast(isNull(base[[eval(vars)]]), "integer"))
+  value <- collect(select(base, eval(vars)))[[1]]
+  
+  nrow <- if(dims[1] >= n) n else dims[1]
+  ncol <- if(dims[2] >= n) n else dims[2]
+  
+  for(index in 1:n) {
+    temp_df <- withColumn(filter(base, base[[eval(vars)]] == value[index]), "PANEL", base$init + index)
+    if(index > 1) unioned <- unionAll(unioned, temp_df)
+    else          unioned <- temp_df
+  }
+  panels <- select(unioned, eval(vars), "PANEL")  
+  
+  for(index in 1:nrow) {
+    temp_df <- withColumn(filter(base, base[[eval(vars)]] == value[1]), "ROW", base$init + index)
+    if(index > 1) unioned <- unionAll(unioned, temp_df)
+    else          unioned <- temp_df
+  }
+  rows <- select(unioned, "ROW")
+
+  for(index in 1:ncol) {
+    temp_df <- withColumn(filter(base, base[[eval(vars)]] == value[1]), "COL", base$init + index)
+    if(index > 1) unioned <- unionAll(unioned, temp_df)
+    else          unioned <- temp_df
+  }
+  cols <- select(unioned, "COL")
+
+  layout <- SparkR::join(rows, cols)
+  layout <- withColumn(layout, "PANEL_init", (layout$ROW - 1) * ncol + layout$COL)
+  
+  panels <- SparkR::join(layout, panels, layout$PANEL_init == panels$PANEL, "inner")
+  panels <- select(panels, "ROW", "COL", "PANEL", eval(vars))
+  
   panels
 }
 

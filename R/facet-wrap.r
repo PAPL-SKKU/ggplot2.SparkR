@@ -71,26 +71,36 @@ facet_wrap <- function(facets, nrow = NULL, ncol = NULL, scales = "fixed",
 
 #' @export
 facet_train_layout.wrap <- function(facet, data) {
-  panels <- layout_wrap(data, facet$facets, facet$nrow, facet$ncol,
-     facet$as.table, facet$drop)
+  data_class <- class(data[1][[1]])
+  if(length(grep("DataFrame", data_class)) == 0) {
+    panels <- layout_wrap(data, facet$facets, facet$nrow, facet$ncol,
+       facet$as.table, facet$drop)
+    n <- nrow(panels)
+    nrow <- max(panels$ROW)
+  
+    # Add scale identification
+    panels$SCALE_X <- if (facet$free$x) seq_len(n) else 1L
+    panels$SCALE_Y <- if (facet$free$y) seq_len(n) else 1L
 
-  n <- nrow(panels)
-  nrow <- max(panels$ROW)
-
-  # Add scale identification
-  panels$SCALE_X <- if (facet$free$x) seq_len(n) else 1L
-  panels$SCALE_Y <- if (facet$free$y) seq_len(n) else 1L
-
-  # Figure out where axes should go
-  panels$AXIS_X <- if (facet$free$x) TRUE else panels$ROW == nrow
-  panels$AXIS_Y <- if (facet$free$y) TRUE else panels$COL == 1
+    # Figure out where axes should go
+    panels$AXIS_X <- if (facet$free$x) TRUE else panels$ROW == nrow
+    panels$AXIS_Y <- if (facet$free$y) TRUE else panels$COL == 1
+  } else {
+    panels <- layout.SparkR_wrap(data, facet$facets, facet$nrow, facet$ncol, 
+       facet$as.table, facet$drop) 
+  }
 
   panels
 }
 
 #' @export
 facet_map_layout.wrap <- function(facet, data, layout) {
-  locate_wrap(data, layout, facet$facets)
+  data_class <- class(data)
+
+  if(length(grep("DataFrame", data_class)) == 0)
+    locate_wrap(data, layout, facet$facets)
+  else
+    locate.SparkR_wrap(data, layout, facet$facets)
 }
 
 # How to think about facet wrap:

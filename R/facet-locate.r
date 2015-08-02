@@ -105,3 +105,12 @@ locate_wrap <- function(data, panels, vars) {
   data$PANEL <- panels$PANEL[match(keys$x, keys$y)]
   data[order(data$PANEL), ]
 }
+
+locate.SparkR_wrap <- function(data, panels, vars) {
+  vars <- as.character(unlist(vars))
+  panels <- withColumnRenamed(panels, eval(vars), "init")
+
+  keys <- SparkR::join(data, panels, data[[eval(vars)]] == panels$init, "inner")
+
+  keys
+}
