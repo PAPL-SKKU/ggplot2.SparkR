@@ -21,9 +21,16 @@ facet_train_layout.null <- function(facet, data) {
 facet_map_layout.null <- function(facet, data, layout) {
   # Need the is.waive check for special case where no data, but aesthetics
   # are mapped to vectors
-  if (is.waive(data) || empty(data))
-    return(cbind(data, PANEL = integer(0)))
-  data$PANEL <- 1L
+  data_class <- class(data)
+
+  if(length(grep("DataFrame", data_class)) == 0) {
+    if (is.waive(data) || empty(data))
+      return(cbind(data, PANEL = integer(0)))
+    data$PANEL <- 1L
+  } else {
+    data <- withColumn(data, "PANEL", cast(isNull(data[[1]]), "integer") + 1)
+  }
+  
   data
 }
 
