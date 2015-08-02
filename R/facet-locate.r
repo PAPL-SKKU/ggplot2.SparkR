@@ -7,7 +7,7 @@ locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE)
   if (empty(data)) {
     return(cbind(data, PANEL = integer(0)))
   }
-
+  
   rows <- as.quoted(rows)
   cols <- as.quoted(cols)
   vars <- c(names(rows), names(cols))
@@ -16,9 +16,8 @@ locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE)
   margin_vars <- list(intersect(names(rows), names(data)),
     intersect(names(cols), names(data)))
   data <- add_margins(data, margin_vars, margins)
-
   facet_vals <- quoted_df(data, c(rows, cols))
-
+  
   # If any facetting variables are missing, add them in by
   # duplicating the data
   missing_facets <- setdiff(vars, names(facet_vals))
@@ -46,8 +45,36 @@ locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE)
 
     data$PANEL <- panels$PANEL[match(keys$x, keys$y)]
   }
-
+  
   data[order(data$PANEL), , drop = FALSE]
+}
+
+locate.SparkR_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE) {
+  rows_char <- as.character(rows)
+  cols_char <- as.character(cols)
+  
+  rows_is_null <- length(rows_char) == 0
+  cols_is_null <- length(cols_char) == 0
+ 
+  # Add PANEL variable 
+  if(!rows_is_null && !cols_is_null) {
+    panels_rename <- withColumnRenamed(panels, eval(rows_char), "row_old")
+    panels_rename <- withColumnRenamed(panels_rename, eval(cols_char), "col_old")
+
+    keys <- SparkR::join(panels_rename, data, panels_rename$row_old == data[[eval(rows_char)]] &
+                                              panels_rename$col_old == data[[eval(cols_char)]], "inner")
+  } else if(!rows_is_null) {
+    panels_rename <- withColumnRenamed(panels, eval(rows_char), "row_old")
+
+    keys <- SparkR::join(panels_rename, data, panels_rename$row_old == data[[eval(rows_char)]], "inner")
+  } else if(!cols_is_null) {
+    panels_rename <- withColumnRenamed(panels, eval(cols_char), "col_old")
+
+    keys <- SparkR::join(panels_rename, data, panels_rename$col_old == data[[eval(cols_char)]], "inner")
+  }
+
+  # Return with unnessary columns (col_old, row_old, COL, ROW)
+  keys
 }
 
 locate_wrap <- function(data, panels, vars) {

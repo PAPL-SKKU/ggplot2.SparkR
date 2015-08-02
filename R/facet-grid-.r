@@ -209,20 +209,37 @@ facet_grid <- function(facets, margins = FALSE, scales = "fixed", space = "fixed
 
 #' @export
 facet_train_layout.grid <- function(facet, data) {
-  layout <- layout_grid(data, facet$rows, facet$cols, facet$margins,
-    drop = facet$drop, as.table = facet$as.table)
+  # Check that input data is "DataFrame" or "data.frame"
+  data_class <- class(data[1][[1]])
 
-  # Relax constraints, if necessary
-  layout$SCALE_X <- if (facet$free$x) layout$COL else 1L
-  layout$SCALE_Y <- if (facet$free$y) layout$ROW else 1L
-
+  if(length(grep("DataFrame", data_class)) == 0) {
+    # ggplot2 with data.frame
+    layout <- layout_grid(data, facet$rows, facet$cols, facet$margins,
+			  drop = facet$drop, as.table = facet$as.table)
+    # Relax constraints, if necessary
+    layout$SCALE_X <- if (facet$free$x) layout$COL else 1L
+    layout$SCALE_Y <- if (facet$free$y) layout$ROW else 1L
+  } else {
+    # ggplot2.SparkR with DataFrame
+    layout <- layout.SparkR_grid(data, facet$rows, facet$cols, facet$margins,
+				drop = facet$drop, as.table = facet$as.table)
+  }
+  
   layout
 }
 
 
 #' @export
 facet_map_layout.grid <- function(facet, data, layout) {
-  locate_grid(data, layout, facet$rows, facet$cols, facet$margins)
+  # Check that input data is "DataFrame" or "data.frame"
+  data_class <- class(data)
+
+  if(length(grep("DataFrame", data_class)) == 0)
+    # ggplot2 with data.frame
+    locate_grid(data, layout, facet$rows, facet$cols, facet$margins)
+  else
+    # ggplot2.SparkR with DataFrame
+    locate.SparkR_grid(data, layout, facet$rows, facet$cols, facet$margins)
 }
 
 #' @export

@@ -17,7 +17,7 @@ ggplot_build <- function(plot) {
   plot <- plot_clone(plot)
   layers <- plot$layers
   layer_data <- lapply(layers, function(y) y$data)
-
+  
   scales <- plot$scales
   # Apply function to layer and matching data
   dlapply <- function(f) {
@@ -30,7 +30,6 @@ ggplot_build <- function(plot) {
 
   # Initialise panels, add extra data for margins & missing facetting
   # variables, and add on a PANEL variable to data
-
   panel <- new_panel()
   panel <- train_layout(panel, plot$facet, layer_data, plot$data)
   data <- map_layout(panel, plot$facet, layer_data, plot$data)
@@ -38,7 +37,7 @@ ggplot_build <- function(plot) {
   # Compute aesthetics to produce data with generalised variable names
   data <- dlapply(function(d, p) p$compute_aesthetics(d, plot))
   data <- lapply(data, add_group)
-
+  
   # Transform all scales
   data <- lapply(data, scales_transform_df, scales = scales)
 
@@ -84,3 +83,39 @@ ggplot_build <- function(plot) {
   list(data = data, panel = panel, plot = plot)
 }
 
+ggplot.SparkR_build <- function(plot) {
+  if(length(plot$layers)==0) stop("No layers in plot", call.=FALSE)
+
+  plot <- plot_clone(plot)
+  layers <- plot$layers
+  layer_data <- lapply(layers, function(y) y$data)
+
+  # Initialise panels, add extra data for margins & missing facetting
+  # variables, and add on a PANEL variable to data
+  # Currently, just facet_grid is possible
+  panel <- new_panel()
+  panel <- train_layout(panel, plot$facet, layer_data, plot$data)
+  data <- facet_map_layout(plot$facet, plot$data, panel$layout)
+
+  # Compute aesthetics to produce data with generalised variable names
+  data <- compute_aesthetics(plot$mapping, data)
+
+  data
+}
+
+compute_aesthetics <- function(aes, df) {
+  values <- as.character(unlist(aes))
+  keys <- names(aes)
+
+  cmd_str <- 'select(df, "PANEL"'
+  for(name in values) 
+    cmd_str <- paste(cmd_str, ', "', name, '"', sep="")
+  
+  cmd_str <- paste(cmd_str, ")", sep="")
+  
+  data <- eval(parse(text = cmd_str))
+  for(index in 1:length(keys)) 
+    data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
+ 
+  data
+}

@@ -35,6 +35,67 @@ layout_grid <- function(data, rows = NULL, cols = NULL, margins = NULL, drop = T
     check.names = FALSE)
   panels <- panels[order(panels$PANEL), , drop = FALSE]
   rownames(panels) <- NULL
+  
+  panels
+}
+
+layout.SparkR_grid <- function(data, rows = NULL, cols = NULL, margins = NULL, drop = TRUE, as.table = TRUE) {
+  if(length(rows) == 0 && length(cols) == 0) return(layout_null())
+
+  rows_char <- as.character(rows)
+  cols_char <- as.character(cols)
+  
+  rows_is_null <- length(rows_char) == 0
+  cols_is_null <- length(cols_char) == 0
+
+  data <- data[1][[1]]
+
+  # Set unique number for ROW grid
+  if(!rows_is_null) {
+    rows_distinct <- distinct(select(data, eval(rows_char)))
+    rows <- withColumn(rows_distinct, "ROW_init", cast(isNull(rows_distinct[[eval(rows_char)]]), "integer"))
+    rows_value <- collect(select(rows, eval(rows_char)))[[1]]
+    index <- 1
+
+    for(value in rows_value) {
+      temp_df <- withColumn(filter(rows, rows[[eval(rows_char)]] == value), "ROW", rows$ROW_init + index)
+      if(index > 1) unioned <- unionAll(unioned, temp_df)
+      else          unioned <- temp_df
+      index <- index + 1
+    }
+
+    rows <- select(unioned, "ROW", eval(rows_char))
+  }
+
+  # Set unique number for COL grid
+  if(!cols_is_null) {
+    cols_distinct <- distinct(select(data, eval(cols_char)))
+    cols <- withColumn(cols_distinct, "COL_init", cast(isNull(cols_distinct[[eval(cols_char)]]), "integer"))
+    cols_value <- collect(select(cols, eval(cols_char)))[[1]]
+    index <- 1
+
+    for(value in cols_value) {
+      temp_df <- withColumn(filter(cols, cols[[eval(cols_char)]] == value), "COL", cols$COL_init + index)
+      if(index > 1) unioned <- unionAll(unioned, temp_df)
+      else          unioned <- temp_df
+      index <- index + 1
+    }
+
+    cols <- select(unioned, "COL", eval(cols_char))
+  }
+ 
+  # Create PANEL info dataset
+  if(!rows_is_null && !cols_is_null) {
+    panels <- SparkR::join(rows, cols)
+    panels <- withColumn(panels, "PANEL", (panels$ROW - 1) * length(cols_value) + panels$COL)
+  } else if(!rows_is_null) {
+    panels <- withColumn(rows, "COL", rows$ROW/rows$ROW)
+    panels <- withColumn(panels, "PANEL", rows$ROW)
+  } else if(!cols_is_null) {
+    panels <- withColumn(cols, "PANEL", cols$COL)
+    panels <- withColumn(panels, "ROW", cols$COL/cols$COL)
+  }
+  
   panels
 }
 
