@@ -201,7 +201,7 @@ print.ggplot <- function(x, newpage = is.null(vp), vp = NULL, ...) {
 #' @param vp viewport to draw plot in
 #' @param ... other arguments not used by this method
 #' @keywords hplot
-#' @expott
+#' @export
 #' @method print ggplot.SparkR
 print.ggplot.SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
   set_last_plot(x)
@@ -216,7 +216,7 @@ print.ggplot.SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
 #' @export
 plot.ggplot <- print.ggplot
 
-#' @rdname print.ggplot.sparkR
+#' @rdname print.ggplot.SparkR
 #' @method plot ggplot.SparkR
 #' @export
 plot.ggplot.SparkR <- print.ggplot.SparkR
