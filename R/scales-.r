@@ -72,6 +72,42 @@ scales_transform_df <- function(scales, df) {
   quickdf(c(transformed, df[setdiff(names(df), names(transformed))]))
 }
 
+scales.SparkR_transform_df <- function(scales, data) {
+  check_scale <- length(scales$scales)
+
+  if(check_scale == 1) {
+    scale_n <- scales$scales[[1]]$aesthetics[1]
+    scale_n_old <- paste0(scale_n, "_OLD")
+
+    trans_n <- scales$scales[[1]]$trans$name
+
+    if(trans_n == "log-10") {
+      data <- withColumnRenamed(data, eval(scale_n), eval(scale_n_old))
+      data <- withColumn(data, eval(scale_n), log10(data[[eval(scale_n_old)]]))
+    }
+  } else if(check_scale == 2) {
+    scale_x <- scales$scales[[1]]$aesthetics[1]
+    scale_y <- scales$scales[[2]]$aesthetics[1]
+    scale_x_old <- paste0(scale_x, "_OLD")
+    scale_y_old <- paste0(scale_y, "_OLD")
+
+    trans_x <- scales$scales[[1]]$trans$name
+    trans_y <- scales$scales[[2]]$trans$name
+
+    if(trans_x == "log-10") {
+      data <- withColumnRenamed(data, eval(scale_x), eval(scale_x_old))
+      data <- withColumn(data, eval(scale_x), log10(data[[eval(scale_x_old)]]))
+    }
+
+    if(trans_y == "log-10") {
+      data <- withColumnRenamed(data, eval(scale_y), eval(scale_y_old))
+      data <- withColumn(data, eval(scale_y), log10(data[[eval(scale_y_old)]]))
+    }
+  }
+
+  data
+}
+
 # @param aesthetics A list of aesthetic-variable mappings. The name of each
 #   item is the aesthetic, and the value of each item is the variable in data.
 scales_add_defaults <- function(scales, data, aesthetics, env) {
