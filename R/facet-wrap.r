@@ -87,9 +87,15 @@ facet_train_layout.wrap <- function(facet, data) {
     panels$AXIS_Y <- if (facet$free$y) TRUE else panels$COL == 1
   } else {
     panels <- layout.SparkR_wrap(data, facet$facets, facet$nrow, facet$ncol, 
-       facet$as.table, facet$drop) 
-  }
+       facet$as.table, facet$drop)
 
+    nrow <- collect(select(panels, max(panels$ROW)))[[1]]
+
+    # Figure out where axes should go
+    panels <- withColumn(panels, "AXIS_X", panels$ROW == nrow)
+    panels <- withColumn(panels, "AXIS_Y", panels$COL == 1)
+  }
+  
   panels
 }
 

@@ -133,7 +133,7 @@ layout_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = 
   
   panels
 }
-
+  
 layout.SparkR_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = TRUE, drop = TRUE) {
   vars <- as.character(unlist(vars))
   if(length(vars) == 0) stop("Error: No variable for calculate")
@@ -142,12 +142,14 @@ layout.SparkR_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.t
   base <- select(data, eval(vars))
   base <- distinct(base, eval(vars))
 
+  # Get total number of layer
   n <- collect(select(base, countDistinct(base[[eval(vars)]])))[[1]]
   dims <- wrap_dims(n, nrow, ncol)
   
   base <- withColumn(base, "init", cast(isNull(base[[eval(vars)]]), "integer"))
   value <- collect(select(base, eval(vars)))[[1]]
   
+  # Set row, column number that is fitting in total number of layer
   nrow <- if(dims[1] >= n) n else dims[1]
   ncol <- if(dims[2] >= n) n else dims[2]
   
@@ -157,7 +159,8 @@ layout.SparkR_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.t
     else          unioned <- temp_df
   }
   panels <- select(unioned, eval(vars), "PANEL")  
-  
+ 
+  # Calculate row number (y-axis number of layer) 
   for(index in 1:nrow) {
     temp_df <- withColumn(filter(base, base[[eval(vars)]] == value[1]), "ROW", base$init + index)
     if(index > 1) unioned <- unionAll(unioned, temp_df)
@@ -165,6 +168,7 @@ layout.SparkR_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.t
   }
   rows <- select(unioned, "ROW")
 
+  # Calculate column number (x-axis number of layer)
   for(index in 1:ncol) {
     temp_df <- withColumn(filter(base, base[[eval(vars)]] == value[1]), "COL", base$init + index)
     if(index > 1) unioned <- unionAll(unioned, temp_df)
@@ -174,10 +178,11 @@ layout.SparkR_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.t
 
   layout <- SparkR::join(rows, cols)
   layout <- withColumn(layout, "PANEL_init", (layout$ROW - 1) * ncol + layout$COL)
-  
+ 
+  # Create PANEL info dataset
   panels <- SparkR::join(layout, panels, layout$PANEL_init == panels$PANEL, "inner")
   panels <- select(panels, "ROW", "COL", "PANEL", eval(vars))
-  
+ 
   panels
 }
 
