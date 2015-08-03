@@ -13,7 +13,7 @@ add_group <- function(data) {
   if (is.null(data$group)) {
     disc <- vapply(data, is.discrete, logical(1))
     disc[names(disc) == "label"] <- FALSE
-
+    
     if (any(disc)) {
       data$group <- id(data[disc], drop = TRUE)
     } else {
@@ -22,10 +22,36 @@ add_group <- function(data) {
   } else {
     data$group <- id(data["group"], drop = TRUE)
   }
-
+  
   data
 }
 
+add.SparkR_group <- function(data) {
+  print("here")
+  select_cmd <- 'select(data, "PANEL"'
+  filter_cmd <- 'filter(data, data[["PANEL"]] == disc[["PANEL"]][index]'
+
+  for(data_types in dtypes(data)) {
+    if(data_types[2] == "string") {
+      select_cmd <- paste(select_cmd, ', "', data_types[1], '"', sep="")
+      filter_cmd <- paste(filter_cmd, ' & data[["', data_types[1], '"]] == disc[["', data_types[1], '"]][index]', sep="")
+    }
+  }
+  select_cmd <- paste(select_cmd, ")")
+  filter_cmd <- paste(filter_cmd, ")")
+
+  disc <- collect(distinct(eval(parse(text = select_cmd))))
+ 
+  for(index in 1:nrow(disc)) {
+    temp_df <- eval(parse(text = filter_cmd))
+    temp_df <- withColumn(temp_df, "group", cast(isNull(temp_df[[1]]), "integer") + index)
+  
+    if(index > 1)  group <- unionAll(group, temp_df)
+    else           group <- temp_df
+  } 
+
+  group
+}
 order_groups <- function(data) {
   if (is.null(data$order)) return(data)
 

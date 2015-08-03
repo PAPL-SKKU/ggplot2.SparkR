@@ -33,7 +33,7 @@ ggplot_build <- function(plot) {
   panel <- new_panel()
   panel <- train_layout(panel, plot$facet, layer_data, plot$data)
   data <- map_layout(panel, plot$facet, layer_data, plot$data)
-
+  
   # Compute aesthetics to produce data with generalised variable names
   data <- dlapply(function(d, p) p$compute_aesthetics(d, plot))
   data <- lapply(data, add_group)
@@ -87,8 +87,11 @@ ggplot.SparkR_build <- function(plot) {
   if(length(plot$layers)==0) stop("No layers in plot", call.=FALSE)
 
   plot <- plot_clone(plot)
+
   layers <- plot$layers
   layer_data <- lapply(layers, function(y) y$data)
+
+  scales <- plot$scales
 
   # Initialise panels, add extra data for margins & missing facetting
   # variables, and add on a PANEL variable to data
@@ -99,6 +102,7 @@ ggplot.SparkR_build <- function(plot) {
 
   # Compute aesthetics to produce data with generalised variable names
   data <- compute_aesthetics(plot$mapping, data)
+  data <- add.SparkR_group(data)
 
   data
 }
