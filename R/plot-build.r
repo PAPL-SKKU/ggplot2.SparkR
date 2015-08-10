@@ -41,8 +41,7 @@ ggplot_build <- function(plot) {
   
   # Transform all scales
   data <- lapply(data, scales_transform_df, scales = scales)
-  print(data)
-  stop("test")
+  
   # Map and train positions so that statistics have access to ranges
   # and all positions are numeric
   scale_x <- function() scales$get_scales("x")
