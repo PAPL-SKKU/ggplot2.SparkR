@@ -197,6 +197,23 @@ calculate_stats <- function(panel, data, layers) {
   })
 }
 
+calculate.SparkR_stats <- function(panel, data, layers) {
+  stat_type <- layers[[1]]$stat$objname
+  switch(stat_type, 
+    bin = {
+      if(length(grep("fill", columns(data))))
+        data <- SparkR::count(groupBy(data, "x", "PANEL", "group", "fill"))
+      else
+        data <- SparkR::count(groupBy(data, "x", "PANEL", "group"))
+    },
+    bin2d = {},
+    boxplot = {},
+    density = {},
+    sum = {}
+  )
+
+  data
+}
 
 xlabel <- function(panel, labels) {
   panel$x_scales[[1]]$name %||% labels$x

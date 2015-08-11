@@ -54,7 +54,7 @@ ggplot_build <- function(plot) {
   data <- calculate_stats(panel, data, layers)
   data <- dlapply(function(d, p) p$map_statistic(d, plot))
   data <- lapply(data, order_groups)
-
+  
   # Make sure missing (but required) aesthetics are added
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
 
@@ -105,8 +105,12 @@ ggplot.SparkR_build <- function(plot) {
   data <- compute_aesthetics(plot$mapping, data)
   data <- add.SparkR_group(data)
 
+  # Transform all scales
   data <- scales.SparkR_transform_df(scales, data)
   
+  # Apply and map statictics
+  data <- calculate.SparkR_stats(panel, data, layers)
+
   data
 }
 
