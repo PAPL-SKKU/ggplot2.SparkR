@@ -12,7 +12,6 @@
 #' @keywords internal
 #' @export
 ggplot_build <- function(plot) {
-  print("ggplot_build")
   if (length(plot$layers) == 0) stop("No layers in plot", call.=FALSE)
 
   plot <- plot_clone(plot)
@@ -46,7 +45,7 @@ ggplot_build <- function(plot) {
   # and all positions are numeric
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
-
+  
   panel <- train_position(panel, data, scale_x(), scale_y())
   data <- map_position(panel, data, scale_x(), scale_y())
   

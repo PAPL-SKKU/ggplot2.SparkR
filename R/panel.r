@@ -201,12 +201,63 @@ calculate.SparkR_stats <- function(panel, data, layers) {
   stat_type <- layers[[1]]$stat$objname
   switch(stat_type, 
     bin = {
+      width <- if(is.null(layers[[1]]$stat_params$width)) 0.9 else layers[[1]]$stat_params$width
+
       if(length(grep("fill", columns(data))))
         data <- SparkR::count(groupBy(data, "x", "PANEL", "group", "fill"))
       else
         data <- SparkR::count(groupBy(data, "x", "PANEL", "group"))
+
+      abs_count <- select(data, abs(data$count))
+      
+      sum_count <- collect(select(abs_count, sum(abs_count[[1]])))[[1]]
+      max_count <- collect(select(abs_count, max(abs_count[[1]])))[[1]]
+      data <- SparkR::mutate(data, density = data$count / width / sum, ncount = data$count / max)
+
+      max_density <- collect(select(data, max(abs(data$density))))[[1]]
+      data <- withColumn(data, "ndensity", data$density / max_density)
     },
-    bin2d = {},
+    bin2d = {
+      bins_null <- layers[[1]]$stat_params$bins
+      bins <- if(is.null(bins_null)) 30 else bins_null
+
+      binwidth <- collect(select(data, (max(data$x) - min(data$x)) / bins, (max(data$y) - min(data$y)) / bins))
+      range <- collect(select(data, min(data$x), max(data$x), min(data$y), max(data$y)))
+      origin <- unlist(range[c(-2, -4)])
+
+      breaks <- list(
+        x = seq(origin[1], range[[2]] + binwidth[[1]], binwidth[[1]]),
+        y = seq(origin[2], range[[4]] + binwidth[[2]], binwidth[[2]])
+      )
+      
+      for(xy in 1:length(breaks)) {
+        col <- names(breaks)[xy] 
+        for(index in 1:(length(breaks[[xy]])-1)) {
+          lower <- breaks[[xy]][index]
+          upper <- breaks[[xy]][index + 1]
+         
+          if(index > 1) filter_df <- filter(data, data[[eval(col)]] > lower & data[[eval(col)]] <= upper)
+          else          filter_df <- filter(data, data[[eval(col)]] >= lower & data[[eval(col)]] <= upper)
+
+          filter_col <- cast(isNull(filter_df[[eval(col)]]), "integer")
+          temp_df <- SparkR::mutate(filter_df, xy_min = filter_col + lower, xy_max = filter_col + upper )
+
+          if(index > 1) unioned <- unionAll(unioned, temp_df)
+          else          unioned <- temp_df
+        }
+        
+        if(xy == 1) data <- SparkR::rename(unioned, xmin = unioned$xy_min, xmax = unioned$xy_max)
+        else        data <- SparkR::rename(unioned, ymin = unioned$xy_min, ymax = unioned$xy_max)
+      }
+
+      if(length(grep("fill", columns(data))))
+        data <- SparkR::count(groupBy(data, "PANEL", "group", "fill", "xmin", "xmax", "ymin", "ymax"))
+      else
+        data <- SparkR::count(groupBy(data, "PANEL", "group", "xmin", "xmax", "ymin", "ymax"))
+
+      sum_count <- collect(select(data, sum(data$count)))[[1]]
+      data <- withColumn(data, "density", data$count / sum_count)
+    },
     boxplot = {},
     density = {},
     sum = {}

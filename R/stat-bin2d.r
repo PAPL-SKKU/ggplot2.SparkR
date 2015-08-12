@@ -75,6 +75,7 @@ StatBin2d <- proto(Stat, {
         binwidth[2] <- diff(range$y) / bins
       }
     }
+    
     stopifnot(is.numeric(binwidth))
     stopifnot(length(binwidth) == 2)
 
@@ -90,7 +91,7 @@ StatBin2d <- proto(Stat, {
       stopifnot(all(sapply(breaks, is.numeric)))
     }
     names(breaks) <- c("x", "y")
-
+    
     xbin <- cut(data$x, sort(breaks$x), include.lowest = TRUE)
     ybin <- cut(data$y, sort(breaks$y), include.lowest = TRUE)
 
@@ -99,12 +100,12 @@ StatBin2d <- proto(Stat, {
     counts <- as.data.frame(
       xtabs(weight ~ xbin + ybin, data), responseName = "count")
     if (drop) counts <- subset(counts, count > 0)
-
+    
     within(counts,{
       xint <- as.numeric(xbin)
       xmin <- breaks$x[xint]
       xmax <- breaks$x[xint + 1]
-
+      
       yint <- as.numeric(ybin)
       ymin <- breaks$y[yint]
       ymax <- breaks$y[yint + 1]
