@@ -63,8 +63,6 @@
 "+.gg" <- function(e1, e2) {
   # Get the name of what was passed in as e2, and pass along so that it
   # can be displayed in error messages
-  print("MK_run +.gg() in plot-construction.r")
-
   e2name <- deparse(substitute(e2))
 
   if      (is.theme(e1))  add_theme(e1, e2, e2name)
@@ -78,47 +76,36 @@
 
 
 add_ggplot <- function(p, object, objectname) {
-  print("MK_run add_ggplot() in plto-construction.r-1")
   if (is.null(object)) return(p)
 
   p <- plot_clone(p)
   if (is.data.frame(object)) {
-    print("MK_run add_ggplot() in plto-construction.r-2")
     p$data <- object
   } else if (is.theme(object)) {
-    print("MK_run add_ggplot() in plto-construction.r-3")
     p$theme <- update_theme(p$theme, object)
   } else if (inherits(object, "scale")) {
-    print("MK_run add_ggplot() in plto-construction.r-4")
     p$scales$add(object)
   } else if(inherits(object, "labels")) {
-    print("MK_run add_ggplot() in plto-construction.r-5")
     p <- update_labels(p, object)
   } else if(inherits(object, "guides")) {
-    print("MK_run add_ggplot() in plto-construction.r-6")
     p <- update_guides(p, object)
   } else if(inherits(object, "uneval")) {
-    print("MK_run add_ggplot() in plto-construction.r-7")
-    p$mapping <- defaults(object, p$mapping)
+      p$mapping <- defaults(object, p$mapping)
 
-    labels <- lapply(object, deparse)
-    names(labels) <- names(object)
-    p <- update_labels(p, labels)
+      labels <- lapply(object, deparse)
+      names(labels) <- names(object)
+      p <- update_labels(p, labels)
   } else if (is.coord(object)) {
-    print("MK_run add_ggplot() in plto-construction.r-8")
-    p$coordinates <- object
-    p
+      p$coordinates <- object
+      p
   } else if (is.facet(object)) {
-    print("MK_run add_ggplot() in plto-construction.r-9")
-    p$facet <- object
-    p
+      p$facet <- object
+      p
   } else if(is.list(object)) {
-      print("MK_run add_ggplot() in plto-construction.r-10")
     for (o in object) {
       p <- p + o
     }
   } else if(is.proto(object)) {
-    print("MK_run add_ggplot() in plto-construction.r-11")
     p <- switch(object$class(),
       layer  = {
         p$layers <- append(p$layers, object)
@@ -143,4 +130,3 @@ add_ggplot <- function(p, object, objectname) {
   set_last_plot(p)
   p
 }
-

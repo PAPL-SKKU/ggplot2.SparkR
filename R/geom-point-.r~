@@ -99,8 +99,6 @@
 #' }
 geom_point <- function (mapping = NULL, data = NULL, stat = "identity", position = "identity",
 na.rm = FALSE, ...) {
-  ###MK_run
-  print("MK_run geom_point() in geom_point")
   GeomPoint$new(mapping = mapping, data = data, stat = stat, position = position,
   na.rm = na.rm, ...)
 }
@@ -138,4 +136,3 @@ GeomPoint <- proto(Geom, {
   default_aes <- function(.) aes(shape=16, colour="black", size=2, fill = NA, alpha = NA)
 
 })
-

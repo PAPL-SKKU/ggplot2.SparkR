@@ -64,16 +64,9 @@ ggtitle <- function(label) {
 
 # Convert aesthetic mapping into text labels
 make_labels <- function(mapping) {
-  print("MK_test variable mapping in make_labels() in lables.r-1")
-  print(mapping)
   remove_dots <- function(x) {
-    print("MK_test variable x in make_labels() in lables.r")
-    print(x)
     gsub(match_calculated_aes, "\\1", x)
   }
 
   lapply(mapping, function(x) remove_dots(deparse(x)))
-  print("MK_test variable mapping in make_labels() in lables.r-2")
-  print(mapping)
 }
-

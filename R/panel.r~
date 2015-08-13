@@ -27,7 +27,6 @@ new_panel <- function() {
 # @param plot_data the default data frame
 # @return an updated panel object
 train_layout <- function(panel, facet, data, plot_data) {
-  print("MK_run train_layout() in panel.r")
   layout <- facet_train_layout(facet, c(list(plot_data), data))
   panel$layout <- layout
   panel$shrink <- facet$shrink
@@ -48,7 +47,6 @@ train_layout <- function(panel, facet, data, plot_data) {
 # @param data list of data frames (one for each layer)
 # @param plot_data default plot data frame
 map_layout <- function(panel, facet, data, plot_data) {
-  print("MK_run map_layout() in panel.r")
   lapply(data, function(data) {
     if (is.waive(data)) data <- plot_data
     facet_map_layout(facet, data, panel$layout)
@@ -171,7 +169,6 @@ panel_scales <- function(panel, i) {
 
 # Compute ranges and dimensions of each panel, using the coord.
 train_ranges <- function(panel, coord) {
-  print("MK_run train_ranges() in panel.r")
   compute_range <- function(ix, iy) {
     # TODO: change coord_train method to take individual x and y scales
     coord_train(coord, list(x = panel$x_scales[[ix]], y = panel$y_scales[[iy]]))
@@ -207,4 +204,3 @@ xlabel <- function(panel, labels) {
 ylabel <- function(panel, labels) {
   panel$y_scales[[1]]$name %||% labels$y
 }
-
