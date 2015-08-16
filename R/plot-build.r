@@ -53,7 +53,7 @@ ggplot_build <- function(plot) {
   data <- calculate_stats(panel, data, layers)
   data <- dlapply(function(d, p) p$map_statistic(d, plot))
   data <- lapply(data, order_groups)
-  
+ 
   # Make sure missing (but required) aesthetics are added
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
 
