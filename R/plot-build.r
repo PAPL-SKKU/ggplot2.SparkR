@@ -116,16 +116,17 @@ ggplot.SparkR_build <- function(plot) {
 compute_aesthetics <- function(aes, df) {
   values <- as.character(unlist(aes))
   keys <- names(aes)
-  
+
   cmd_str <- 'select(df, "PANEL"'
   for(name in values) 
     cmd_str <- paste(cmd_str, ', "', name, '"', sep="")
   
   cmd_str <- paste(cmd_str, ")", sep="")
+  
   data <- eval(parse(text = cmd_str))
-  
-  for(index in 1:length(keys)) 
+  for(index in 1:length(keys)) {
+    if(keys[index] == "group") keys[index] <- "grouped"
     data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
-  
+  }
   data
 }
