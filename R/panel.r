@@ -281,7 +281,17 @@ calculate.SparkR_stats <- function(panel, data, layers) {
     },
     density = {},
     sum = {
-      print("sum")
+      if(length(grep("fill", columns(data))))
+        data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "fill", "group"))
+      else
+        data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "group"))
+     
+      count_group <- SparkR::count(groupBy(data, "group"))
+      data <- SparkR::rename(data, n = data$count, group_old = data$group)
+      data <- SparkR::join(data, count_group, data$group == count_group$group, "inner")
+#      data <- withColumn(data, "prop", 1 / data$count)
+#      showDF(data)
+#      stop("test")
     }
   )
 

@@ -55,6 +55,7 @@ StatSum <- proto(Stat, {
     counts <- count(data, group_by, wt_var = "weight")
     counts <- rename(counts, c(freq = "n"), warn_missing = FALSE)
     counts$prop <- ave(counts$n, counts$group, FUN = prop.table)
+    print(counts)
     counts
   }
 })
