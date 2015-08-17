@@ -287,11 +287,11 @@ calculate.SparkR_stats <- function(panel, data, layers) {
         data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "group"))
      
       count_group <- SparkR::count(groupBy(data, "group"))
+      
       data <- SparkR::rename(data, n = data$count, group_old = data$group)
-      data <- SparkR::join(data, count_group, data$group == count_group$group, "inner")
-#      data <- withColumn(data, "prop", 1 / data$count)
-#      showDF(data)
-#      stop("test")
+      data <- SparkR::join(data, count_group, data$group_old == count_group$group, "inner")
+      data <- withColumn(data, "prop", data$count^(-1))
+      data <- select(data, "PANEL", "x", "y", "group", "n", "prop")
     }
   )
 
