@@ -103,7 +103,7 @@ ggplot.SparkR_build <- function(plot) {
   # Compute aesthetics to produce data with generalised variable names
   data <- compute_aesthetics(plot$mapping, data)
   data <- add.SparkR_group(data)
-
+  
   data
 }
 
@@ -118,8 +118,9 @@ compute_aesthetics <- function(aes, df) {
   cmd_str <- paste(cmd_str, ")", sep="")
   
   data <- eval(parse(text = cmd_str))
-  for(index in 1:length(keys)) 
+  for(index in 1:length(keys)) {
+    if(keys[index] == "group") keys[index] <- "grouped"
     data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
- 
+  }
   data
 }

@@ -26,19 +26,56 @@ add_group <- function(data) {
   data
 }
 
+isDiscrete <- function(data) {
+  data_types <- unlist(dtypes(data))
+  isDiscrete <- FALSE
+  isDiscreteY <- FALSE
+
+  if(length(grep("grouped", data_types)) == 0) {
+    x_data_types <- data_types[grep("x", data_types, perl = T) + 1]
+    if(x_data_types == "string" || x_data_types == "boolean")
+      isDiscrete <- TRUE
+    else if(collect(select(data, countDistinct(data$x)))[[1]] < 7)
+      isDiscrete <- TRUE
+
+    if(length(grep("y", data_types)) != 0) {
+      y_data_types <- data_types[grep("y", data_types, perl = T) + 1]
+      if(y_data_types == "string" || y_data_types == "boolean") {
+        isDiscrete <- TRUE
+        isDiscreteY <- TRUE
+      } else if(collect(select(data, countDistinct(data$y)))[[1]] < 7) {
+        isDiscrete <- TRUE
+        isDiscreteY <- TRUE
+      }
+    }
+
+    if(isDiscrete && isDiscreteY) column_arr <- c("x", "y")
+    else if(isDiscrete)           column_arr <- c("x")
+    else                          column_arr <- c() 
+
+  } else {
+    column_arr <- c("grouped")  
+  }
+
+  if(length(grep("fill", data_types)) != 0)    column_arr <- append(column_arr, "fill")
+  if(length(grep("colour", data_types)) != 0)  column_arr <- append(column_arr, "colour")
+ 
+  column_arr
+}
+
 add.SparkR_group <- function(data) {
+  discrete_col <- isDiscrete(data)
+
   select_cmd <- 'select(data, "PANEL"'
   filter_cmd <- 'filter(data, data[["PANEL"]] == disc[["PANEL"]][index]'
-
-  for(data_types in dtypes(data)) {
-    if(data_types[2] == "string") {
-      select_cmd <- paste(select_cmd, ', "', data_types[1], '"', sep="")
-      filter_cmd <- paste(filter_cmd, ' & data[["', data_types[1], '"]] == disc[["', data_types[1], '"]][index]', sep="")
-    }
+  
+  for(col in discrete_col) {
+    select_cmd <- paste(select_cmd, ', "', col, '"', sep="")
+    filter_cmd <- paste(filter_cmd, ' & data[["', col, '"]] == disc[["', col, '"]][index]', sep="")
   }
+
   select_cmd <- paste(select_cmd, ")")
   filter_cmd <- paste(filter_cmd, ")")
-
   disc <- collect(distinct(eval(parse(text = select_cmd))))
  
   for(index in 1:nrow(disc)) {
@@ -51,6 +88,7 @@ add.SparkR_group <- function(data) {
 
   group
 }
+
 order_groups <- function(data) {
   if (is.null(data$order)) return(data)
 
