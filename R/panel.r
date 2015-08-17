@@ -280,7 +280,9 @@ calculate.SparkR_stats <- function(panel, data, layers) {
       data <- stats
     },
     density = {},
-    sum = {}
+    sum = {
+      print("sum")
+    }
   )
 
   data
