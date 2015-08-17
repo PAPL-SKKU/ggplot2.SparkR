@@ -99,7 +99,7 @@ ggplot.SparkR_build <- function(plot) {
   panel <- new_panel()
   panel <- train_layout(panel, plot$facet, layer_data, plot$data)
   data <- facet_map_layout(plot$facet, plot$data, panel$layout)
-
+  
   # Compute aesthetics to produce data with generalised variable names
   data <- compute_aesthetics(plot$mapping, data)
   data <- add.SparkR_group(data)
@@ -116,16 +116,16 @@ ggplot.SparkR_build <- function(plot) {
 compute_aesthetics <- function(aes, df) {
   values <- as.character(unlist(aes))
   keys <- names(aes)
-
+  
   cmd_str <- 'select(df, "PANEL"'
   for(name in values) 
     cmd_str <- paste(cmd_str, ', "', name, '"', sep="")
   
   cmd_str <- paste(cmd_str, ")", sep="")
-  
   data <- eval(parse(text = cmd_str))
+  
   for(index in 1:length(keys)) 
     data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
- 
+  
   data
 }
