@@ -27,7 +27,6 @@ add_group <- function(data) {
 }
 
 add.SparkR_group <- function(data) {
-  print("here")
   select_cmd <- 'select(data, "PANEL"'
   filter_cmd <- 'filter(data, data[["PANEL"]] == disc[["PANEL"]][index]'
 
