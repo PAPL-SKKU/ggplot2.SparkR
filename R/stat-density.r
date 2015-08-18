@@ -100,13 +100,13 @@ StatDensity <- proto(Stat, {
   calculate <- function(., data, scales, adjust=1, kernel="gaussian", trim=FALSE, na.rm = FALSE, ...) {
     data <- remove_missing(data, na.rm, "x", name = "stat_density",
       finite = TRUE)
-    print(data)
+    
     if (trim) {
       range <- range(data$x, na.rm = TRUE)
     } else {
       range <- scale_dimension(scales$x, c(0, 0))
     }
-    print(range)
+    
     compute_density(data$x, data$w, from = range[1], to = range[2],
       adjust = adjust, kernel = kernel)
   }
