@@ -209,7 +209,8 @@ calculate.SparkR_stats <- function(panel, data, layers) {
         data <- SparkR::count(groupBy(data, "x", "PANEL", "group"))
       
       data <- SparkR::mutate(data, density = data$count / abs(data$count) / width,
-                                   ncount = data$count / abs(data$count))
+                                   ncount = data$count / abs(data$count),
+                                   width = data$count * 0 + width)
       
       max_density <- collect(select(data, max(abs(data$density))))[[1]]
       data <- withColumn(data, "ndensity", data$density / max_density)
@@ -258,15 +259,19 @@ calculate.SparkR_stats <- function(panel, data, layers) {
     boxplot = {
       qs <- c(0, 0.25, 0.5, 0.75, 1)
       coef_null <- layers[[1]]$stat_params$coef
+      width_null <- layers[[1]]$stat_params$width
+      weight_null <- layers[[1]]$geom_params$weight
+
       coef <- if(is.null(coef_null)) 1.5 else coef_null
+      width <- if(is.null(width_null)) 0.75 else width_null
+      weight <- if(is.null(weight_null)) 1 else weight_null
 
       if(length(grep("fill", columns(data))))
         stats <- agg(groupBy(data, "x", "fill", "PANEL", "group"), ymin = min(data$y),
                      lower = min(data$y)+(max(data$y)-min(data$y))*qs[2],
                      middle = min(data$y)+(max(data$y)-min(data$y))*qs[3],
                      upper = min(data$y)+(max(data$y)-min(data$y))*qs[4],
-                     ymax = max(data$y),
-                     iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
+                     ymax = max(data$y), iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
                      n = sqrt(sum(cast(isNotNull(data$y), "integer"))))
       else
         stats <- agg(groupBy(data, "x", "PANEL", "group"), ymin = min(data$y),
@@ -275,10 +280,12 @@ calculate.SparkR_stats <- function(panel, data, layers) {
                      upper = min(data$y)+(max(data$y)-min(data$y))*qs[4],
                      ymax = max(data$y), iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
                      n = sqrt(sum(cast(isNotNull(data$y), "integer"))))
-
+ 
       #outliers <- withColumn(stats, "outliers", stats$y < (stats$lower - coef * stats$iqr) | stats$y > (stats$upper + coef * stats$iqr))
-      stats <- SparkR::mutate(stats, notchupper = stats$middle + ((stats$iqr / stats$n) * 1.58), notchlower = stats$middle - ((stats$iqr / stats$n) * 1.58))
-      
+
+      stats <- SparkR::mutate(stats, width = stats$ymin * 0 + width, weight = stats$ymin * 0 + weight)
+      stats <- SparkR::mutate(stats, notchupper = stats$middle + ((stats$iqr / stats$n) * 1.58), 
+                                     notchlower = stats$middle - ((stats$iqr / stats$n) * 1.58))
       data <- stats
     },
     density = {},

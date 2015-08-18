@@ -59,7 +59,7 @@ ggplot_build <- function(plot) {
 
   # Reparameterise geoms from (e.g.) y and width to ymin and ymax
   data <- dlapply(function(d, p) p$reparameterise(d))
-
+  
   # Apply position adjustments
   data <- dlapply(function(d, p) p$adjust_position(d))
 
@@ -110,7 +110,9 @@ ggplot.SparkR_build <- function(plot) {
   # Apply and map statictics
   data <- calculate.SparkR_stats(panel, data, layers)
   data <- map_statistic(data, plot)
-
+ 
+  data <- reparameterise(data, plot)
+  
   data
 }
 
@@ -149,5 +151,41 @@ map_statistic <- function(data, plot) {
   # Add map stat output to aesthetics
   data <- withColumn(data, names(new), data[[as.character(new)]])
   
+  data
+}
+
+reparameterise <- function(data, plot) {
+  objname <- plot$layers[[1]]$geom$objname
+  column_data_types <- unlist(dtypes(data))
+  x_data_types <- column_data_types[grep("x", column_data_types) + 1]
+  
+  if(x_data_types == "string") {
+    distinct <- distinct(select(data, "x"))
+    distinct <- SparkR::rename(distinct, x_new = distinct$x)
+    distinct_value <- collect(distinct)[[1]]
+
+    for(index in 1:length(distinct_value)) {
+      temp_df <- SparkR::filter(distinct, distinct[[1]] == distinct_value[index])
+      temp_df <- withColumn(temp_df, "x", cast(isNull(distinct[[1]]), "integer") + index)
+
+      if(index > 1) unioned <- unionAll(unioned, temp_df)
+      else          unioned <- temp_df
+    }
+ 
+    data <- SparkR::rename(data, x_old = data$x) 
+    data <- SparkR::join(data, unioned, data$x_old == unioned$x_new, "inner")
+  }
+ 
+  switch(objname, 
+    bar = {
+      data <- select(data, "PANEL", "x", "y", "count", "PANEL", "group",
+                           "density", "ncount", "ndensity", "width")
+      data <- SparkR::mutate(data, ymin = data$y * 0, ymax = data$y,
+                                   xmin = data$x - (data$width / 2), xmax = data$x + (data$width / 2))
+    },
+    boxplot = {
+    }
+  )
+
   data
 }

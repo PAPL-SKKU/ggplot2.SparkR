@@ -32,14 +32,14 @@ isDiscrete <- function(data) {
   isDiscreteY <- FALSE
 
   if(length(grep("grouped", data_types)) == 0) {
-    x_data_types <- data_types[grep("x", data_types, perl = T) + 1]
+    x_data_types <- data_types[grep("x", data_types) + 1]
     if(x_data_types == "string" || x_data_types == "boolean")
       isDiscrete <- TRUE
     else if(collect(select(data, countDistinct(data$x)))[[1]] < 7)
       isDiscrete <- TRUE
 
     if(length(grep("y", data_types)) != 0) {
-      y_data_types <- data_types[grep("y", data_types, perl = T) + 1]
+      y_data_types <- data_types[grep("y", data_types) + 1]
       if(y_data_types == "string" || y_data_types == "boolean") {
         isDiscrete <- TRUE
         isDiscreteY <- TRUE
