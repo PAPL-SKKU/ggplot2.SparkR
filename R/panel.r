@@ -207,13 +207,12 @@ calculate.SparkR_stats <- function(panel, data, layers) {
         data <- SparkR::count(groupBy(data, "x", "PANEL", "group", "fill"))
       else
         data <- SparkR::count(groupBy(data, "x", "PANEL", "group"))
-
-      abs_count <- select(data, abs(data$count))
       
+      abs_count <- select(data, abs(data$count))
       sum_count <- collect(select(abs_count, sum(abs_count[[1]])))[[1]]
-      max_count <- collect(select(abs_count, max(abs_count[[1]])))[[1]]
-      data <- SparkR::mutate(data, density = data$count / width / sum, ncount = data$count / max)
-
+      max_count <- collect(select(abs_count, max(abs_count[[1]])))[[1]] 
+      data <- SparkR::mutate(data, density = data$count / width / sum_count, ncount = data$count / max_count)
+      
       max_density <- collect(select(data, max(abs(data$density))))[[1]]
       data <- withColumn(data, "ndensity", data$density / max_density)
     },

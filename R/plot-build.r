@@ -103,12 +103,13 @@ ggplot.SparkR_build <- function(plot) {
   # Compute aesthetics to produce data with generalised variable names
   data <- compute_aesthetics(plot$mapping, data)
   data <- add.SparkR_group(data)
-
+  
   # Transform all scales
   data <- scales.SparkR_transform_df(scales, data)
   
   # Apply and map statictics
   data <- calculate.SparkR_stats(panel, data, layers)
+  data <- map_statistic(data, plot)
 
   data
 }
@@ -128,5 +129,25 @@ compute_aesthetics <- function(aes, df) {
     if(keys[index] == "group") keys[index] <- "grouped"
     data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
   }
+  data
+}
+
+map_statistic <- function(data, plot) {
+  # Assemble aesthetics from ayer, plot and stat mappings
+  layers <- plot$layers[[1]]
+  aesthetics <- layers$mapping
+
+  if(layers$inherit.aes)  aesthetics <- defaults(aesthetics, plot$mapping)
+  
+  aesthetics <- defaults(aesthetics, layers$stat$default_aes())
+  aesthetics <- compact(aesthetics)
+
+  new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
+  
+  if(length(new) == 0)  return(data)
+  
+  # Add map stat output to aesthetics
+  data <- withColumn(data, names(new), data[[as.character(new)]])
+  
   data
 }

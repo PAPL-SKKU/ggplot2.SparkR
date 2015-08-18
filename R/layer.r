@@ -199,6 +199,7 @@ Layer <- proto(expr = {
     aesthetics <- compact(aesthetics)
 
     new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
+    
     if (length(new) == 0) return(data)
 
     # Add map stat output to aesthetics
