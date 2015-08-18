@@ -262,16 +262,21 @@ calculate.SparkR_stats <- function(panel, data, layers) {
       qs <- c(0, 0.25, 0.5, 0.75, 1)
       coef_null <- layers[[1]]$stat_params$coef
       coef <- if(is.null(coef_null)) 1.5 else coef_null
-      
+
       if(length(grep("fill", columns(data))))
         stats <- agg(groupBy(data, "x", "fill", "PANEL", "group"), ymin = min(data$y),
-                     lower = min(data$y)+(max(data$y)-min(data$y))*qs[2], middle = min(data$y)+(max(data$y)-min(data$y))*qs[3],
-                     upper = min(data$y)+(max(data$y)-min(data$y))*qs[4], ymax = max(data$y), iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
-                     n = sqrt(sum(cast(isNotNull(data$y), "integer" ))))
+                     lower = min(data$y)+(max(data$y)-min(data$y))*qs[2],
+                     middle = min(data$y)+(max(data$y)-min(data$y))*qs[3],
+                     upper = min(data$y)+(max(data$y)-min(data$y))*qs[4],
+                     ymax = max(data$y),
+                     iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
+                     n = sqrt(sum(cast(isNotNull(data$y), "integer"))))
       else
         stats <- agg(groupBy(data, "x", "PANEL", "group"), ymin = min(data$y),
-                     lower = min(data$y)+(max(data$y)-min(data$y))*qs[2], middle = min(data$y)+(max(data$y)-min(data$y))*qs[3],
-                     upper = min(data$y)+(max(data$y)-min(data$y))*qs[4], ymax = max(data$y), iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
+                     lower = min(data$y)+(max(data$y)-min(data$y))*qs[2],
+                     middle = min(data$y)+(max(data$y)-min(data$y))*qs[3],
+                     upper = min(data$y)+(max(data$y)-min(data$y))*qs[4],
+                     ymax = max(data$y), iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
                      n = sqrt(sum(cast(isNotNull(data$y), "integer"))))
 
       #outliers <- withColumn(stats, "outliers", stats$y < (stats$lower - coef * stats$iqr) | stats$y > (stats$upper + coef * stats$iqr))
@@ -285,9 +290,9 @@ calculate.SparkR_stats <- function(panel, data, layers) {
         data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "fill", "group"))
       else
         data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "group"))
-     
+
       count_group <- SparkR::count(groupBy(data, "group"))
-      
+
       data <- SparkR::rename(data, n = data$count, group_old = data$group)
       data <- SparkR::join(data, count_group, data$group_old == count_group$group, "inner")
       data <- withColumn(data, "prop", data$count^(-1))
