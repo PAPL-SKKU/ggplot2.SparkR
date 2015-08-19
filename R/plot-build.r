@@ -59,7 +59,7 @@ ggplot_build <- function(plot) {
 
   # Reparameterise geoms from (e.g.) y and width to ymin and ymax
   data <- dlapply(function(d, p) p$reparameterise(d))
-  
+
   # Apply position adjustments
   data <- dlapply(function(d, p) p$adjust_position(d))
 
@@ -69,7 +69,7 @@ ggplot_build <- function(plot) {
   reset_scales(panel)
   panel <- train_position(panel, data, scale_x(), scale_y())
   data <- map_position(panel, data, scale_x(), scale_y())
-
+  
   # Train and map non-position scales
   npscales <- scales$non_position_scales()
   if (npscales$n() > 0) {
@@ -112,7 +112,8 @@ ggplot.SparkR_build <- function(plot) {
   data <- map_statistic(data, plot)
  
   data <- reparameterise(data, plot)
-  
+  showDF(data)
+  stop("test")
   data
 }
 
@@ -175,15 +176,39 @@ reparameterise <- function(data, plot) {
     data <- SparkR::rename(data, x_old = data$x) 
     data <- SparkR::join(data, unioned, data$x_old == unioned$x_new, "inner")
   }
- 
+
   switch(objname, 
     bar = {
-      data <- select(data, "PANEL", "x", "y", "count", "PANEL", "group",
-                           "density", "ncount", "ndensity", "width")
       data <- SparkR::mutate(data, ymin = data$y * 0, ymax = data$y,
                                    xmin = data$x - (data$width / 2), xmax = data$x + (data$width / 2))
+
+      if(length(grep("fill", columns(data))) == 0)
+        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density",
+                             "PANEL", "group", "ymin", "ymax", "xmin", "xmax")
+      else
+        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density", "fill",
+                             "PANEL", "group", "ymin", "ymax", "xmin", "xmax")
     },
     boxplot = {
+      params <- plot$layers[[1]]$geom_params
+ 
+      if(is.null(params) || is.null(params$varwidth) || 
+         !params$varwidth || length(grep("relvarwidth", columns(data))) == 0) {
+        data <- SparkR::mutate(data, xmin = data$x - data$width / 2, xmax = data$x + data$width / 2)
+      } else {
+        max_relvarwidth <- collect(select(data, max(data$relvarwidth)))[[1]]
+        data <- SparkR::mutate(data, xmin = data$x - (data$ralvarwidth * data$width) / (2 * max_relvarwidth),
+                                     xmax = data$x + (data$relvarwidth * data$width) / (2 * max_relvarwidth))
+      }
+
+      if(length(grep("fill", columns(data))) == 0)
+        data <- select(data, "ymin", "lower", "middle", "upper", "ymax",
+                             "notchupper", "notchlower", "x",
+                             "PANEL", "group", "weight", "xmin", "xmax")
+      else
+        data <- select(data, "ymin", "lower", "middle", "upper", "ymax",
+                             "notchupper", "notchlower", "x", "fill",
+                             "PANEL", "group", "weight", "xmin", "xmax")
     }
   )
 

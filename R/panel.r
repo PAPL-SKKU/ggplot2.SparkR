@@ -272,20 +272,21 @@ calculate.SparkR_stats <- function(panel, data, layers) {
                      middle = min(data$y)+(max(data$y)-min(data$y))*qs[3],
                      upper = min(data$y)+(max(data$y)-min(data$y))*qs[4],
                      ymax = max(data$y), iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
-                     n = sqrt(sum(cast(isNotNull(data$y), "integer"))))
+                     relvarwidth = sqrt(sum(cast(isNotNull(data$y), "integer"))))
       else
         stats <- agg(groupBy(data, "x", "PANEL", "group"), ymin = min(data$y),
                      lower = min(data$y)+(max(data$y)-min(data$y))*qs[2],
                      middle = min(data$y)+(max(data$y)-min(data$y))*qs[3],
                      upper = min(data$y)+(max(data$y)-min(data$y))*qs[4],
                      ymax = max(data$y), iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
-                     n = sqrt(sum(cast(isNotNull(data$y), "integer"))))
+                     relvarwidth = sqrt(sum(cast(isNotNull(data$y), "integer"))))
  
       #outliers <- withColumn(stats, "outliers", stats$y < (stats$lower - coef * stats$iqr) | stats$y > (stats$upper + coef * stats$iqr))
 
-      stats <- SparkR::mutate(stats, width = stats$ymin * 0 + width, weight = stats$ymin * 0 + weight)
-      stats <- SparkR::mutate(stats, notchupper = stats$middle + ((stats$iqr / stats$n) * 1.58), 
-                                     notchlower = stats$middle - ((stats$iqr / stats$n) * 1.58))
+      stats <- SparkR::mutate(stats, width = stats$ymin * 0 + width,
+                                     weight = stats$ymin * 0 + weight,
+                                     notchupper = stats$middle + ((stats$iqr / stats$relvarwidth) * 1.58), 
+                                     notchlower = stats$middle - ((stats$iqr / stats$relvarwidth) * 1.58))
       data <- stats
     },
     density = {},
