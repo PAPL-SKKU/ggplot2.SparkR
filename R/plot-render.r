@@ -206,7 +206,7 @@ print.ggplot <- function(x, newpage = is.null(vp), vp = NULL, ...) {
 print.ggplot.SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
   set_last_plot(x)
   if(newpage) grid.newpage()
-
+  
   data <- ggplot.SparkR_build(x)
 #  print("End")
   return(data)

@@ -73,8 +73,7 @@ scales_transform_df <- function(scales, df) {
 }
 
 scales.SparkR_transform_df <- function(scales, data) {
-  check_scale <- length(scales$scales)
-
+  
   if(check_scale == 1) {
     scale_n <- scales$scales[[1]]$aesthetics[1]
     scale_n_old <- paste0(scale_n, "_OLD")
@@ -115,25 +114,45 @@ scales_add_defaults <- function(scales, data, aesthetics, env) {
   names(aesthetics) <- unlist(lapply(names(aesthetics), aes_to_scale))
 
   new_aesthetics <- setdiff(names(aesthetics), scales$input())
+  
   # No new aesthetics, so no new scales to add
   if (is.null(new_aesthetics)) return()
 
-  datacols <- tryapply(
-    aesthetics[new_aesthetics], eval,
-    envir = data, enclos = env
-  )
+  if(length(grep("DataFrame", class(data))) == 0) {
+    datacols <- tryapply(
+      aesthetics[new_aesthetics], eval,
+      envir = data, enclos = env
+    )
 
-  for(aes in names(datacols)) {
-    type <- scale_type(datacols[[aes]])
-    scale_name <- paste("scale", aes, type, sep="_")
+    for(aes in names(datacols)) {
+      type <- scale_type(datacols[[aes]])
+      scale_name <- paste("scale", aes, type, sep="_")
 
-    # Skip aesthetics with no scales (e.g. group, order, etc)
-    scale_f <- find_global(scale_name, env, mode = "function")
-    if (is.null(scale_f)) next
+      # Skip aesthetics with no scales (e.g. group, order, etc)
+      scale_f <- find_global(scale_name, env, mode = "function")
+      if (is.null(scale_f)) next
 
-    scales$add(scale_f())
+      scales$add(scale_f())
+    }
+  } else {
+    datacols <- new_aesthetics
+    type_arr <- unlist(dtypes(data))
+    
+    for(aes in datacols) {
+      type_col <- type_arr[grep(aes, type_arr) + 1]
+      if(type_col == "string" || type_col == "boolean")
+        type <- "discrete"
+      else  
+        type <- "continuous"
+
+      scale_name <- paste("scale", aes, type, sep = "_")
+      scale_f <- find_global(scale_name, env, mode = "function")
+
+      if (is.null(scale_f)) next
+
+      scales$add(scale_f())
+    }
   }
-
 }
 
 # Add missing but required scales.

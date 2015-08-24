@@ -72,16 +72,15 @@ train_position <- function(panel, data, x_scale, y_scale) {
   if (is.null(panel$y_scales) && !is.null(y_scale)) {
     panel$y_scales <- rlply(max(layout$SCALE_Y), scale_clone(y_scale))
   }
-
+  
   # loop over each layer, training x and y scales in turn
   for(layer_data in data) {
-
     match_id <- match(layer_data$PANEL, layout$PANEL)
-
+    
     if (!is.null(x_scale)) {
       x_vars <- intersect(x_scale$aesthetics, names(layer_data))
       SCALE_X <- layout$SCALE_X[match_id]
-
+      
       scale_apply(layer_data, x_vars, scale_train, SCALE_X, panel$x_scales)
     }
 
@@ -92,10 +91,41 @@ train_position <- function(panel, data, x_scale, y_scale) {
       scale_apply(layer_data, y_vars, scale_train, SCALE_Y, panel$y_scales)
     }
   }
-
+  
   panel
 }
 
+train.SparkR_position <- function(panel, data, x_scale, y_scale) {
+  # Initialise scales if needed, and possible.
+  layout <- panel$layout
+
+  if (is.null(panel$x_scales) && !is.null(x_scale)) {
+    panel$x_scales <- rlply(max(layout$SCALE_X), scale_clone(x_scale))
+  }
+  if (is.null(panel$y_scales) && !is.null(y_scale)) {
+    panel$y_scales <- rlply(max(layout$SCALE_Y), scale_clone(y_scale))
+  }
+
+  # loop over each layer, training x and y scales in turn
+  layer_data <- collect(select(data, "PANEL"))
+  match_id <- match(layer_data$PANEL, layout$PANEL)
+    
+  if (!is.null(x_scale)) {
+    x_vars <- intersect(x_scale$aesthetics, names(layer_data))
+    SCALE_X <- layout$SCALE_X[match_id]
+      
+    scale_apply(layer_data, x_vars, scale_train, SCALE_X, panel$x_scales)
+  }
+
+  if (!is.null(y_scale)) {
+    y_vars <- intersect(y_scale$aesthetics, names(layer_data))
+    SCALE_Y <- layout$SCALE_Y[match_id]
+
+    scale_apply(layer_data, y_vars, scale_train, SCALE_Y, panel$y_scales)
+  }
+
+  panel
+}
 
 reset_scales <- function(panel) {
   if (!panel$shrink) return()

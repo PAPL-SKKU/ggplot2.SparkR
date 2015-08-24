@@ -123,7 +123,6 @@ ggplot.data.frame <- function(data, mapping=aes(), ..., environment = parent.fra
 #' @export
 ggplot.DataFrame <- function(df, mapping=aes(), ..., environment = parent.frame()) {
   if (!missing(mapping) && !inherits(mapping, "uneval")) stop("Mapping should be created with aes or aes_string")
-
   p <- structure(list(
     data = df,
     layers = list(),
@@ -134,9 +133,8 @@ ggplot.DataFrame <- function(df, mapping=aes(), ..., environment = parent.frame(
     facet = facet_null(),
     plot_env = environment
   ), class = c("gg", "ggplot.SparkR", "ggplot"))
-
+  
   p$labels <- make_labels(mapping)
-
   set_last_plot(p)
   p
 }

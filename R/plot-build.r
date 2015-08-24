@@ -19,6 +19,7 @@ ggplot_build <- function(plot) {
   layer_data <- lapply(layers, function(y) y$data)
   
   scales <- plot$scales
+  
   # Apply function to layer and matching data
   dlapply <- function(f) {
     out <- vector("list", length(data))
@@ -48,7 +49,7 @@ ggplot_build <- function(plot) {
   
   panel <- train_position(panel, data, scale_x(), scale_y())
   data <- map_position(panel, data, scale_x(), scale_y())
-  
+
   # Apply and map statistics
   data <- calculate_stats(panel, data, layers)
   data <- dlapply(function(d, p) p$map_statistic(d, plot))
@@ -56,7 +57,7 @@ ggplot_build <- function(plot) {
   
   # Make sure missing (but required) aesthetics are added
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
-
+  
   # Reparameterise geoms from (e.g.) y and width to ymin and ymax
   data <- dlapply(function(d, p) p$reparameterise(d))
 
@@ -69,30 +70,37 @@ ggplot_build <- function(plot) {
   reset_scales(panel)
   panel <- train_position(panel, data, scale_x(), scale_y())
   data <- map_position(panel, data, scale_x(), scale_y())
-  
+
   # Train and map non-position scales
   npscales <- scales$non_position_scales()
   if (npscales$n() > 0) {
     lapply(data, scales_train_df, scales = npscales)
     data <- lapply(data, scales_map_df, scales = npscales)
   }
-
+  
   # Train coordinate system
   panel <- train_ranges(panel, plot$coordinates)
-
+#  print("--------------------------------------")
+#  print(data)
+#  print("****************")
+#  panel$layout <- NULL
+#  panel$shrink <- NULL
+#  panel$x_scales <- NULL
+#  panel$y_scales <- NULL
+#  print(panel)
   list(data = data, panel = panel, plot = plot)
 }
 
 ggplot.SparkR_build <- function(plot) {
   if(length(plot$layers)==0) stop("No layers in plot", call.=FALSE)
-
+  
   plot <- plot_clone(plot)
 
   layers <- plot$layers
   layer_data <- lapply(layers, function(y) y$data)
-
+  
   scales <- plot$scales
-
+  
   # Initialise panels, add extra data for margins & missing facetting
   # variables, and add on a PANEL variable to data
   # Currently, just facet_grid is possible
@@ -101,25 +109,37 @@ ggplot.SparkR_build <- function(plot) {
   data <- facet_map_layout(plot$facet, plot$data, panel$layout)
   
   # Compute aesthetics to produce data with generalised variable names
-  data <- compute_aesthetics(plot$mapping, data)
+  data <- compute_aesthetics(data, plot)
   data <- add.SparkR_group(data)
-  
+  stop("ggplot.SparkR_build")
   # Transform all scales
   data <- scales.SparkR_transform_df(scales, data)
   
+  scale_x <- function() scales$get_scales("x")
+  scale_y <- function() scales$get_scales("y")
+  
+  # map_position() need to make
+  panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
+  #data <- map.SparkR_position()
+ 
   # Apply and map statictics
   data <- calculate.SparkR_stats(panel, data, layers)
   data <- map_statistic(data, plot)
  
   data <- reparameterise(data, plot)
+
+  # adjust_position
+  # fill option -> change parameter (xmin, xmax, ymin, ymax, x, y ...)  
+
   showDF(data)
   stop("test")
   data
 }
 
-compute_aesthetics <- function(aes, df) {
-  values <- as.character(unlist(aes))
-  keys <- names(aes)
+compute_aesthetics <- function(df, plot) {
+  
+  values <- as.character(unlist(plot$mapping))
+  keys <- names(plot$mapping)
 
   cmd_str <- 'select(df, "PANEL"'
   for(name in values) 
@@ -128,10 +148,13 @@ compute_aesthetics <- function(aes, df) {
   cmd_str <- paste(cmd_str, ")", sep="")
   
   data <- eval(parse(text = cmd_str))
+
   for(index in 1:length(keys)) {
     if(keys[index] == "group") keys[index] <- "grouped"
     data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
   }
+  
+  scales_add_defaults(plot$scales, data, plot$mapping, plot$plot_env)
   data
 }
 
