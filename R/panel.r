@@ -165,6 +165,46 @@ map_position <- function(panel, data, x_scale, y_scale) {
   })
 }
 
+map.SparkR_position <- function(panel, data) {
+  data_and_types <- dtypes(data)
+
+  for(pair in data_and_types) {
+    if(pair[1] == "x" && pair[2] == "string") {
+      distinct <- distinct(select(data, "x"))
+      distinct <- SparkR::rename(distinct, x_new = distinct$x)
+      distinct_value <- collect(distinct)[[1]]
+
+      for(index in 1:length(distinct_value)) {
+        temp_df <- SparkR::filter(distinct, distinct[[1]] == distinct_value[index])
+        temp_df <- withColumn(temp_df, "x", cast(isNull(distinct[[1]]), "integer") + index)
+
+        if(index > 1) unioned <- unionAll(unioned, temp_df)
+        else          unioned <- temp_df
+      }
+
+      data <- SparkR::rename(data, x_old = data$x)
+      data <- SparkR::join(data, unioned, data$x_old == unioned$x_new, "inner")
+    } else if(pair[1] == "y" && pair[2] == "string") {
+      distinct <- distinct(select(data, "y"))
+      distinct <- SparkR::rename(distinct, y_new = distinct$y)
+      distinct_value <- collect(distinct)[[1]]
+
+      for(index in 1:length(distinct_value)) {
+        temp_df <- SparkR::filter(distinct, distinct[[1]] == distinct_value[index])
+        temp_df <- withColumn(temp_df, "y", cast(isNull(distinct[[1]]), "integer") + index)
+
+        if(index > 1) unioned <- unionAll(unioned, temp_df)
+        else          unioned <- temp_df
+      }
+
+      data <- SparkR::rename(data, y_old = data$y)
+      data <- SparkR::join(data, unioned, data$y_old == unioned$y_new, "inner")
+    }
+  }
+ 
+  data
+}
+
 # Function for applying scale function to multiple variables in a given
 # data set.  Implement in such a way to minimise copying and hence maximise
 # speed

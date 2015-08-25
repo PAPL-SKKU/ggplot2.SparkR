@@ -208,8 +208,10 @@ print.ggplot.SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
   if(newpage) grid.newpage()
   
   data <- ggplot.SparkR_build(x)
+
+  showDF(data$data)
 #  print("End")
-  return(data)
+#  return(data)
 }
 #' @rdname print.ggplot
 #' @method plot ggplot

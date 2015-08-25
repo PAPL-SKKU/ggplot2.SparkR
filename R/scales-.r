@@ -72,38 +72,24 @@ scales_transform_df <- function(scales, df) {
   quickdf(c(transformed, df[setdiff(names(df), names(transformed))]))
 }
 
-scales.SparkR_transform_df <- function(scales, data) {
-  
-  if(check_scale == 1) {
-    scale_n <- scales$scales[[1]]$aesthetics[1]
-    scale_n_old <- paste0(scale_n, "_OLD")
-
-    trans_n <- scales$scales[[1]]$trans$name
-
-    if(trans_n == "log-10") {
-      data <- withColumnRenamed(data, eval(scale_n), eval(scale_n_old))
-      data <- withColumn(data, eval(scale_n), log10(data[[eval(scale_n_old)]]))
-    }
-  } else if(check_scale == 2) {
-    scale_x <- scales$scales[[1]]$aesthetics[1]
-    scale_y <- scales$scales[[2]]$aesthetics[1]
-    scale_x_old <- paste0(scale_x, "_OLD")
-    scale_y_old <- paste0(scale_y, "_OLD")
-
-    trans_x <- scales$scales[[1]]$trans$name
-    trans_y <- scales$scales[[2]]$trans$name
-
-    if(trans_x == "log-10") {
-      data <- withColumnRenamed(data, eval(scale_x), eval(scale_x_old))
-      data <- withColumn(data, eval(scale_x), log10(data[[eval(scale_x_old)]]))
-    }
-
-    if(trans_y == "log-10") {
-      data <- withColumnRenamed(data, eval(scale_y), eval(scale_y_old))
-      data <- withColumn(data, eval(scale_y), log10(data[[eval(scale_y_old)]]))
+scales.SparkR_transform_df <- function(scales, data) { 
+  for(index in 1:length(scales$scales)) {
+    scale_type <- scales$scales[[index]]$trans$name
+    done <- scales$scales[[index]]$trans$done
+    scale_aes <- scales$scales[[index]]$aesthetics[1]
+      
+    for(col_list in columns(data)) {
+      if(scale_aes == col_list && !is.null(scale_type) && is.null(done)) {
+        scale_aes_old <- paste0(scale_aes, "_OLD")
+ 
+        if(scale_type == "log-10") {
+          data <- withColumnRenamed(data, eval(scale_aes), eval(scale_aes_old))
+          data <- withColumn(data, eval(scale_aes), log10(data[[eval(scale_aes_old)]])) 
+        }
+        scales$scales[[index]]$trans$done <- TRUE
+      }
     }
   }
-
   data
 }
 

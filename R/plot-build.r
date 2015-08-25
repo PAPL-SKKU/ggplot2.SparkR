@@ -49,7 +49,7 @@ ggplot_build <- function(plot) {
   
   panel <- train_position(panel, data, scale_x(), scale_y())
   data <- map_position(panel, data, scale_x(), scale_y())
-
+  
   # Apply and map statistics
   data <- calculate_stats(panel, data, layers)
   data <- dlapply(function(d, p) p$map_statistic(d, plot))
@@ -80,14 +80,7 @@ ggplot_build <- function(plot) {
   
   # Train coordinate system
   panel <- train_ranges(panel, plot$coordinates)
-#  print("--------------------------------------")
-#  print(data)
-#  print("****************")
-#  panel$layout <- NULL
-#  panel$shrink <- NULL
-#  panel$x_scales <- NULL
-#  panel$y_scales <- NULL
-#  print(panel)
+  
   list(data = data, panel = panel, plot = plot)
 }
 
@@ -111,16 +104,15 @@ ggplot.SparkR_build <- function(plot) {
   # Compute aesthetics to produce data with generalised variable names
   data <- compute_aesthetics(data, plot)
   data <- add.SparkR_group(data)
-  stop("ggplot.SparkR_build")
+  
   # Transform all scales
   data <- scales.SparkR_transform_df(scales, data)
   
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
   
-  # map_position() need to make
   panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
-  #data <- map.SparkR_position()
+  data <- map.SparkR_position(panel, data)
  
   # Apply and map statictics
   data <- calculate.SparkR_stats(panel, data, layers)
@@ -131,9 +123,17 @@ ggplot.SparkR_build <- function(plot) {
   # adjust_position
   # fill option -> change parameter (xmin, xmax, ymin, ymax, x, y ...)  
 
-  showDF(data)
-  stop("test")
-  data
+  # Reset position scales, then re-train and map.  This ensures that facets
+  # have control over the range of a plot: is it generated from what's
+  # displayed, or does it include the range of underlying data
+  reset_scales(panel)
+  panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
+  data <- map.SparkR_position(panel, data)
+
+  # Make sure missing (but required) transformed scales are added
+  data <- scales.SparkR_transform_df(scales, data)
+  
+  list(data = data, panel = panel, plot = plot)
 }
 
 compute_aesthetics <- function(df, plot) {
@@ -180,25 +180,6 @@ map_statistic <- function(data, plot) {
 
 reparameterise <- function(data, plot) {
   objname <- plot$layers[[1]]$geom$objname
-  column_data_types <- unlist(dtypes(data))
-  x_data_types <- column_data_types[grep("x", column_data_types) + 1]
-  
-  if(x_data_types == "string") {
-    distinct <- distinct(select(data, "x"))
-    distinct <- SparkR::rename(distinct, x_new = distinct$x)
-    distinct_value <- collect(distinct)[[1]]
-
-    for(index in 1:length(distinct_value)) {
-      temp_df <- SparkR::filter(distinct, distinct[[1]] == distinct_value[index])
-      temp_df <- withColumn(temp_df, "x", cast(isNull(distinct[[1]]), "integer") + index)
-
-      if(index > 1) unioned <- unionAll(unioned, temp_df)
-      else          unioned <- temp_df
-    }
- 
-    data <- SparkR::rename(data, x_old = data$x) 
-    data <- SparkR::join(data, unioned, data$x_old == unioned$x_new, "inner")
-  }
 
   switch(objname, 
     bar = {
