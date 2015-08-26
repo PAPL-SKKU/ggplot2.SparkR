@@ -59,24 +59,20 @@ isDiscrete <- function(data) {
 
   if(length(grep("fill", data_types)) != 0)    column_arr <- append(column_arr, "fill")
   if(length(grep("colour", data_types)) != 0)  column_arr <- append(column_arr, "colour")
- 
+
   column_arr
 }
 
 add.SparkR_group <- function(data) {
   discrete_col <- isDiscrete(data)
-
-  select_cmd <- 'select(data, "PANEL"'
   filter_cmd <- 'filter(data, data[["PANEL"]] == disc[["PANEL"]][index]'
   
   for(col in discrete_col) {
-    select_cmd <- paste(select_cmd, ', "', col, '"', sep="")
     filter_cmd <- paste(filter_cmd, ' & data[["', col, '"]] == disc[["', col, '"]][index]', sep="")
   }
 
-  select_cmd <- paste(select_cmd, ")")
   filter_cmd <- paste(filter_cmd, ")")
-  disc <- collect(distinct(eval(parse(text = select_cmd))))
+  disc <- collect(distinct(select(data, list(discrete_col, "PANEL"))))
  
   for(index in 1:nrow(disc)) {
     temp_df <- eval(parse(text = filter_cmd))

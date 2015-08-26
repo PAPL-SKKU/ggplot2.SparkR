@@ -141,13 +141,7 @@ compute_aesthetics <- function(df, plot) {
   values <- as.character(unlist(plot$mapping))
   keys <- names(plot$mapping)
 
-  cmd_str <- 'select(df, "PANEL"'
-  for(name in values) 
-    cmd_str <- paste(cmd_str, ', "', name, '"', sep="")
-  
-  cmd_str <- paste(cmd_str, ")", sep="")
-  
-  data <- eval(parse(text = cmd_str))
+  data <- select(df, list(values, "PANEL"))
 
   for(index in 1:length(keys)) {
     if(keys[index] == "group") keys[index] <- "grouped"

@@ -65,11 +65,9 @@ locate.SparkR_grid <- function(data, panels, rows = NULL, cols = NULL, margins =
                                               panels_rename$col_old == data[[eval(cols_char)]], "inner")
   } else if(!rows_is_null) {
     panels_rename <- withColumnRenamed(panels, eval(rows_char), "row_old")
-
     keys <- SparkR::join(panels_rename, data, panels_rename$row_old == data[[eval(rows_char)]], "inner")
   } else if(!cols_is_null) {
     panels_rename <- withColumnRenamed(panels, eval(cols_char), "col_old")
-
     keys <- SparkR::join(panels_rename, data, panels_rename$col_old == data[[eval(cols_char)]], "inner")
   }
 

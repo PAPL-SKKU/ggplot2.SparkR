@@ -359,7 +359,6 @@ calculate.SparkR_stats <- function(panel, data, layers) {
                                      notchlower = stats$middle - ((stats$iqr / stats$relvarwidth) * 1.58))
       data <- stats
     },
-    density = {},
     sum = {
       if(length(grep("fill", columns(data))))
         data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "fill", "group"))
