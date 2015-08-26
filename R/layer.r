@@ -249,6 +249,57 @@ Layer <- proto(expr = {
   class <- function(.) "layer"
 })
 
+adjust_position <- function(data, layers) {
+  position <- layers[[1]]$position$objname
+
+  switch(position, 
+    dodge = {
+      count_data <- collect(SparkR::count(groupBy(data, "x")))
+      x_data <- count_data$x
+      n <- count_data$count
+      d_width <- collect(agg(groupBy(data, "x", "width"), d_width = max(data$xmax - data$xmin)))$d_width
+
+      for(index in 1:length(x_data)) {
+        filter_df <- filter(data, data$x == x_data[index])
+ 
+        for(i in 1:n[index]) {
+          new_df <- limit(filter_df, i)
+
+          if(i == 1) old_df <- new_df
+          else {
+            temp_df <- new_df
+            new_df <- except(new_df, old_df)
+            old_df <- temp_df
+          }
+
+          temp_df <- withColumn(new_df, "groupidx", cast(isNull(new_df$x), "integer") + i)
+          if(i == 1) unioned <- temp_df
+          else       unioned <- unionAll(unioned, temp_df)
+        } 
+        temp_df <- SparkR::rename(unioned, x_old = unioned$x, xmin_old = unioned$xmin, xmax_old = unioned$xmax)
+
+        if(n[index] == 1) {
+          temp_df <- withColumn(temp_df, "x", temp_df$x_old)
+          temp_df <- SparkR::mutate(temp_df, xmin = temp_df$xmin_old, xmax = temp_df$xmax_old)
+        } else { 
+          temp_df <- withColumn(temp_df, "x", temp_df$x_old + temp_df$width * ((temp_df$groupidx - 0.5) / n[index] - 0.5))
+          temp_df <- SparkR::mutate(temp_df, xmin = temp_df$x - d_width[index] / n[index] / 2,
+                                             xmax = temp_df$x + d_width[index] / n[index] / 2)
+        }
+
+        if(index == 1) unioned2 <- temp_df
+        else           unioned2 <- unionAll(unioned2, temp_df)
+      }
+
+      data <- unioned2
+    },
+    identity = {NULL},
+    stack = {}
+  )
+  
+  data
+}
+
 #' Create a new layer
 #'
 #' @keywords internal

@@ -62,9 +62,7 @@ ggplot_build <- function(plot) {
   data <- dlapply(function(d, p) p$reparameterise(d))
 
   # Apply position adjustments
-  print(data)
   data <- dlapply(function(d, p) p$adjust_position(d))
-  print(data)
   stop("ggplot_build")
 
   # Reset position scales, then re-train and map.  This ensures that facets
@@ -116,15 +114,18 @@ ggplot.SparkR_build <- function(plot) {
   
   panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
   data <- map.SparkR_position(panel, data)
- 
+  
   # Apply and map statictics
   data <- calculate.SparkR_stats(panel, data, layers)
   data <- map_statistic(data, plot)
- 
+  
   data <- reparameterise(data, plot)
-
+  
   # adjust_position
-  # fill option -> change parameter (xmin, xmax, ymin, ymax, x, y ...)  
+  # fill option -> change parameter (xmin, xmax, ymin, ymax, x, y ...)
+  data <- adjust_position(data, layers)
+  showDF(data)
+  stop("ggplot.SparkR_build")
 
   # Reset position scales, then re-train and map.  This ensures that facets
   # have control over the range of a plot: is it generated from what's
@@ -202,11 +203,11 @@ reparameterise <- function(data, plot) {
 
       if(length(grep("fill", columns(data))) == 0)
         data <- select(data, "ymin", "lower", "middle", "upper", "ymax",
-                             "notchupper", "notchlower", "x",
+                             "notchupper", "notchlower", "x", "width",
                              "PANEL", "group", "weight", "xmin", "xmax")
       else
         data <- select(data, "ymin", "lower", "middle", "upper", "ymax",
-                             "notchupper", "notchlower", "x", "fill",
+                             "notchupper", "notchlower", "x", "fill", "width",
                              "PANEL", "group", "weight", "xmin", "xmax")
     }
   )

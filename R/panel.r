@@ -66,6 +66,7 @@ map_layout <- function(panel, facet, data, plot_data) {
 train_position <- function(panel, data, x_scale, y_scale) {
   # Initialise scales if needed, and possible.
   layout <- panel$layout
+
   if (is.null(panel$x_scales) && !is.null(x_scale)) {
     panel$x_scales <- rlply(max(layout$SCALE_X), scale_clone(x_scale))
   }
@@ -97,15 +98,21 @@ train_position <- function(panel, data, x_scale, y_scale) {
 
 train.SparkR_position <- function(panel, data, x_scale, y_scale) {
   # Initialise scales if needed, and possible.
-  layout <- panel$layout
 
+  # ERROR (BJH) Need to think about facet_* option in here
+
+  layout <- panel$layout
+  
   if (is.null(panel$x_scales) && !is.null(x_scale)) {
     panel$x_scales <- rlply(max(layout$SCALE_X), scale_clone(x_scale))
   }
+
+  print(panel$y_scales)
+  print(y_scale)
+
   if (is.null(panel$y_scales) && !is.null(y_scale)) {
     panel$y_scales <- rlply(max(layout$SCALE_Y), scale_clone(y_scale))
   }
-
   # loop over each layer, training x and y scales in turn
   layer_data <- collect(select(data, "PANEL"))
   match_id <- match(layer_data$PANEL, layout$PANEL)
