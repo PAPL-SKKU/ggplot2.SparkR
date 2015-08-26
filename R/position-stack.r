@@ -38,6 +38,7 @@ PositionStack <- proto(Position, {
   objname <- "stack"
 
   adjust <- function(., data) {
+    print("position_stack")
     if (empty(data)) return(data.frame())
 
     data <- remove_missing(data, FALSE,

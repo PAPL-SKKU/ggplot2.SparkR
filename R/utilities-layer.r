@@ -72,7 +72,7 @@ add.SparkR_group <- function(data) {
   }
 
   filter_cmd <- paste(filter_cmd, ")")
-  disc <- collect(distinct(select(data, list(discrete_col, "PANEL"))))
+  disc <- collect(distinct(select(data, append(as.list(discrete_col), "PANEL"))))
  
   for(index in 1:nrow(disc)) {
     temp_df <- eval(parse(text = filter_cmd))

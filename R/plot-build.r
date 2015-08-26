@@ -62,7 +62,10 @@ ggplot_build <- function(plot) {
   data <- dlapply(function(d, p) p$reparameterise(d))
 
   # Apply position adjustments
+  print(data)
   data <- dlapply(function(d, p) p$adjust_position(d))
+  print(data)
+  stop("ggplot_build")
 
   # Reset position scales, then re-train and map.  This ensures that facets
   # have control over the range of a plot: is it generated from what's
@@ -137,12 +140,10 @@ ggplot.SparkR_build <- function(plot) {
 }
 
 compute_aesthetics <- function(df, plot) {
-  
   values <- as.character(unlist(plot$mapping))
   keys <- names(plot$mapping)
-
-  data <- select(df, list(values, "PANEL"))
-
+  data <- select(df, append(as.list(values), "PANEL"))
+  
   for(index in 1:length(keys)) {
     if(keys[index] == "group") keys[index] <- "grouped"
     data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
