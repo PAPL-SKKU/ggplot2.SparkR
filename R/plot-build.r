@@ -46,7 +46,7 @@ ggplot_build <- function(plot) {
   # and all positions are numeric
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
-  
+
   panel <- train_position(panel, data, scale_x(), scale_y())
   data <- map_position(panel, data, scale_x(), scale_y())
   
@@ -63,7 +63,6 @@ ggplot_build <- function(plot) {
 
   # Apply position adjustments
   data <- dlapply(function(d, p) p$adjust_position(d))
-  stop("ggplot_build")
 
   # Reset position scales, then re-train and map.  This ensures that facets
   # have control over the range of a plot: is it generated from what's
@@ -95,48 +94,35 @@ ggplot.SparkR_build <- function(plot) {
   
   scales <- plot$scales
   
-  # Initialise panels, add extra data for margins & missing facetting
-  # variables, and add on a PANEL variable to data
-  # Currently, just facet_grid is possible
   panel <- new_panel()
   panel <- train_layout(panel, plot$facet, layer_data, plot$data)
   data <- facet_map_layout(plot$facet, plot$data, panel$layout)
-  
-  # Compute aesthetics to produce data with generalised variable names
+
   data <- compute_aesthetics(data, plot)
   data <- add.SparkR_group(data)
-  
-  # Transform all scales
+
   data <- scales.SparkR_transform_df(scales, data)
-  
+
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
+
+  #panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
+  data <- map.SparkR_position(data)
   
-  panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
-  data <- map.SparkR_position(panel, data)
-  
-  # Apply and map statictics
-  data <- calculate.SparkR_stats(panel, data, layers)
+  data <- calculate.SparkR_stats(data, layers)
   data <- map_statistic(data, plot)
   
   data <- reparameterise(data, plot)
   
-  # adjust_position
-  # fill option -> change parameter (xmin, xmax, ymin, ymax, x, y ...)
   data <- adjust_position(data, layers)
-  showDF(data)
-  stop("ggplot.SparkR_build")
-
-  # Reset position scales, then re-train and map.  This ensures that facets
-  # have control over the range of a plot: is it generated from what's
-  # displayed, or does it include the range of underlying data
-  reset_scales(panel)
-  panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
-  data <- map.SparkR_position(panel, data)
-
-  # Make sure missing (but required) transformed scales are added
-  data <- scales.SparkR_transform_df(scales, data)
   
+  #reset_scales(panel)
+  #panel <- train_position(panel, data, scale_x(), scale_y())
+  data <- map.SparkR_position(data)
+
+  data <- scales.SparkR_transform_df(scales, data)
+#  panel <- train_ranges(panel, plot$coordinates)
+ 
   list(data = data, panel = panel, plot = plot)
 }
 

@@ -88,8 +88,12 @@ facet_train_layout.wrap <- function(facet, data) {
   } else {
     panels <- layout.SparkR_wrap(data, facet$facets, facet$nrow, facet$ncol, 
        facet$as.table, facet$drop)
+    
+    nrow <- panels$nrow
+    panels <- panels$panels
 
-    nrow <- collect(select(panels, max(panels$ROW)))[[1]]
+    panels <- SparkR::mutate(panels, SCALE_X = cast(isNull(panels[[1]]), "integer") + 1,
+                                     SCALE_Y = cast(isNull(panels[[1]]), "integer") + 1)
 
     # Figure out where axes should go
     panels <- withColumn(panels, "AXIS_X", panels$ROW == nrow)

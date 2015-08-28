@@ -12,9 +12,16 @@ facet_null <- function(shrink = TRUE) {
 
 #' @export
 facet_train_layout.null <- function(facet, data) {
-  data.frame(
-    PANEL = 1L, ROW = 1L, COL = 1L,
-    SCALE_X = 1L, SCALE_Y = 1L)
+  data_class <- class(data[1][[1]])
+
+  if(length(grep("DataFrame", data_class)) == 0) {
+    data.frame(
+      PANEL = 1L, ROW = 1L, COL = 1L,
+      SCALE_X = 1L, SCALE_Y = 1L)
+  } 
+  else {
+    # How to make new DataFrame that has same value?
+  }
 }
 
 #' @export
