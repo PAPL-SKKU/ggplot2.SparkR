@@ -47,7 +47,10 @@ ggplot_build <- function(plot) {
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
 
+#  print(panel)
   panel <- train_position(panel, data, scale_x(), scale_y())
+#  print(panel)
+#  stop("ggplot_build")
   data <- map_position(panel, data, scale_x(), scale_y())
   
   # Apply and map statistics
@@ -106,7 +109,10 @@ ggplot.SparkR_build <- function(plot) {
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
 
-  #panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
+  print(panel)
+  panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
+  print(panel)
+  stop("ggplot.SparkR_build")
   data <- map.SparkR_position(data)
   
   data <- calculate.SparkR_stats(data, layers)

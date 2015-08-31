@@ -73,15 +73,15 @@ train_position <- function(panel, data, x_scale, y_scale) {
   if (is.null(panel$y_scales) && !is.null(y_scale)) {
     panel$y_scales <- rlply(max(layout$SCALE_Y), scale_clone(y_scale))
   }
-  
+  print(panel$y_scales)
   # loop over each layer, training x and y scales in turn
   for(layer_data in data) {
     match_id <- match(layer_data$PANEL, layout$PANEL)
-    
+
     if (!is.null(x_scale)) {
       x_vars <- intersect(x_scale$aesthetics, names(layer_data))
       SCALE_X <- layout$SCALE_X[match_id]
-      
+
       scale_apply(layer_data, x_vars, scale_train, SCALE_X, panel$x_scales)
     }
 
@@ -92,41 +92,42 @@ train_position <- function(panel, data, x_scale, y_scale) {
       scale_apply(layer_data, y_vars, scale_train, SCALE_Y, panel$y_scales)
     }
   }
-  
+  print(panel$y_scales[[1]]$range)
   panel
 }
 
 train.SparkR_position <- function(panel, data, x_scale, y_scale) {
   # Initialise scales if needed, and possible.
-  layout <- panel$layout
-
   if (is.null(panel$x_scales) && !is.null(x_scale)) {
-    panel$x_scales <- rlply(collect(select(layout, max(layout$SCALE_X)))[[1]], scale_clone(x_scale))
+    panel$x_scales <- rlply(1, scale_clone(x_scale))
   }
 
   if (is.null(panel$y_scales) && !is.null(y_scale)) {
-    panel$y_scales <- rlply(collect(select(layout, max(layout$SCALE_Y)))[[1]], scale_clone(y_scale))
+    panel$y_scales <- rlply(1, scale_clone(y_scale))
+  }
+
+  # match_id <- match(layer_data$PANEL, layout$PANEL)
+  # Add x, y range in panel$x_scales[[1]]$range / panel$y_scales[[1]]$range
+  # continuous : max, min value
+  # discrete : unique value of column
+
+  if (!is.null(x_scale) && length(grep("x", columns(data))) != 0) {
+    if(panel$x_scales[[1]]$scale_name == "position_c") {
+      panel$x_scales[[1]]$range <- select(data, min(data$x), max(data$x))
+      print("x_continuous")
+    } else if(panel$x_scales[[1]]$scale_name == "position_d") {
+      print("x_discrete")
+    }
+  }
+
+  if (!is.null(y_scale) && length(grep("y", columns(data))) != 0) {
+    if(panel$y_scales[[1]]$scale_name == "position_c") {
+      print("y_continuous")
+    } else if(panel$y_scales[[1]]$scale_name == "position_d") {
+      print("y_discrete")
+    }
   }
   
-  # loop over each layer, training x and y scales in turn
-  layer_data <- collect(select(data, "PANEL"))
-
-  match_id <- match(layer_data$PANEL, layout$PANEL)
-    
-  if (!is.null(x_scale)) {
-    x_vars <- intersect(x_scale$aesthetics, names(layer_data))
-    SCALE_X <- layout$SCALE_X[match_id]
-      
-    scale_apply(layer_data, x_vars, scale_train, SCALE_X, panel$x_scales)
-  }
-
-  if (!is.null(y_scale)) {
-    y_vars <- intersect(y_scale$aesthetics, names(layer_data))
-    SCALE_Y <- layout$SCALE_Y[match_id]
-
-    scale_apply(layer_data, y_vars, scale_train, SCALE_Y, panel$y_scales)
-  }
-
   panel
 }
 
@@ -217,20 +218,19 @@ scale_apply <- function(data, vars, f, scale_id, scales) {
 
   n <- length(scales)
   if (any(is.na(scale_id))) stop()
-
+  
   scale_index <- split_indices(scale_id, n)
-
   lapply(vars, function(var) {
     pieces <- lapply(seq_along(scales), function(i) {
       f(scales[[i]], data[[var]][scale_index[[i]]])
     })
+    
     # Join pieces back together, if necessary
     if (!is.null(pieces)) {
       unlist(pieces)[order(unlist(scale_index))]
     }
   })
 }
-
 
 panel_scales <- function(panel, i) {
   this_panel <- panel$layout[panel$layout$PANEL == i, ]
