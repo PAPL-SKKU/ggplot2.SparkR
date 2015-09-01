@@ -47,17 +47,14 @@ ggplot_build <- function(plot) {
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
 
-#  print(panel)
   panel <- train_position(panel, data, scale_x(), scale_y())
-#  print(panel)
-#  stop("ggplot_build")
   data <- map_position(panel, data, scale_x(), scale_y())
-  
+
   # Apply and map statistics
   data <- calculate_stats(panel, data, layers)
   data <- dlapply(function(d, p) p$map_statistic(d, plot))
   data <- lapply(data, order_groups)
-  
+
   # Make sure missing (but required) aesthetics are added
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
   
@@ -89,7 +86,7 @@ ggplot_build <- function(plot) {
 
 ggplot.SparkR_build <- function(plot) {
   if(length(plot$layers)==0) stop("No layers in plot", call.=FALSE)
-  
+
   plot <- plot_clone(plot)
 
   layers <- plot$layers
@@ -102,6 +99,7 @@ ggplot.SparkR_build <- function(plot) {
   data <- facet_map_layout(plot$facet, plot$data, panel$layout)
 
   data <- compute_aesthetics(data, plot)
+  # Need to optimize
   data <- add.SparkR_group(data)
 
   data <- scales.SparkR_transform_df(scales, data)
@@ -109,25 +107,29 @@ ggplot.SparkR_build <- function(plot) {
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
 
-  print(panel)
   panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
-  print(panel)
-  stop("ggplot.SparkR_build")
+  # Need to optimize
   data <- map.SparkR_position(data)
   
   data <- calculate.SparkR_stats(data, layers)
   data <- map_statistic(data, plot)
   
-  data <- reparameterise(data, plot)
+  scales_add_missing(plot, c("x", "y"), plot$plot_env)
   
+  data <- reparameterise(data, plot)
+  # Need to optimize
   data <- adjust_position(data, layers)
   
-  #reset_scales(panel)
-  #panel <- train_position(panel, data, scale_x(), scale_y())
+  reset_scales(panel)
+  panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
+  # Need to optimize
   data <- map.SparkR_position(data)
 
   data <- scales.SparkR_transform_df(scales, data)
-#  panel <- train_ranges(panel, plot$coordinates)
+
+  stop("ggplot.SparkR_build")
+  # Need to collect all data?
+ # panel <- train_ranges(panel, plot$coordinates)
  
   list(data = data, panel = panel, plot = plot)
 }

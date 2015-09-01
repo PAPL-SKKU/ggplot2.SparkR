@@ -73,7 +73,7 @@ train_position <- function(panel, data, x_scale, y_scale) {
   if (is.null(panel$y_scales) && !is.null(y_scale)) {
     panel$y_scales <- rlply(max(layout$SCALE_Y), scale_clone(y_scale))
   }
-  print(panel$y_scales)
+  
   # loop over each layer, training x and y scales in turn
   for(layer_data in data) {
     match_id <- match(layer_data$PANEL, layout$PANEL)
@@ -92,7 +92,7 @@ train_position <- function(panel, data, x_scale, y_scale) {
       scale_apply(layer_data, y_vars, scale_train, SCALE_Y, panel$y_scales)
     }
   }
-  print(panel$y_scales[[1]]$range)
+  
   panel
 }
 
@@ -106,25 +106,23 @@ train.SparkR_position <- function(panel, data, x_scale, y_scale) {
     panel$y_scales <- rlply(1, scale_clone(y_scale))
   }
 
-  # match_id <- match(layer_data$PANEL, layout$PANEL)
-  # Add x, y range in panel$x_scales[[1]]$range / panel$y_scales[[1]]$range
+  # Add x, y range in panel$x_scales[[1]]$range & panel$y_scales[[1]]$range
   # continuous : max, min value
   # discrete : unique value of column
 
   if (!is.null(x_scale) && length(grep("x", columns(data))) != 0) {
     if(panel$x_scales[[1]]$scale_name == "position_c") {
       panel$x_scales[[1]]$range <- select(data, min(data$x), max(data$x))
-      print("x_continuous")
     } else if(panel$x_scales[[1]]$scale_name == "position_d") {
-      print("x_discrete")
+      panel$x_scales[[1]]$range <- distinct(select(data, data$x))
     }
   }
 
   if (!is.null(y_scale) && length(grep("y", columns(data))) != 0) {
     if(panel$y_scales[[1]]$scale_name == "position_c") {
-      print("y_continuous")
+      panel$x_scales[[1]]$range <- select(data, min(data$x), max(data$x))
     } else if(panel$y_scales[[1]]$scale_name == "position_d") {
-      print("y_discrete")
+      panel$x_scales[[1]]$range <- distinct(select(data, data$x))
     }
   }
   
@@ -176,6 +174,7 @@ map.SparkR_position <- function(data) {
     if(pair[1] == "x" && pair[2] == "string") {
       distinct <- distinct(select(data, "x"))
       distinct <- SparkR::rename(distinct, x_new = distinct$x)
+      # overhead
       distinct_value <- collect(distinct)[[1]]
 
       for(index in 1:length(distinct_value)) {
@@ -191,6 +190,7 @@ map.SparkR_position <- function(data) {
     } else if(pair[1] == "y" && pair[2] == "string") {
       distinct <- distinct(select(data, "y"))
       distinct <- SparkR::rename(distinct, y_new = distinct$y)
+      # overhead
       distinct_value <- collect(distinct)[[1]]
 
       for(index in 1:length(distinct_value)) {
