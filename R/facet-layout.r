@@ -211,8 +211,6 @@ layout.SparkR_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.t
 }
 
 layout_null <- function(data) {
-   print("here")
-   print(data)
    data.frame(PANEL = 1, ROW = 1, COL = 1)
 }
 
