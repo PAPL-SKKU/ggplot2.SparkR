@@ -222,7 +222,7 @@ facet_train_layout.grid <- function(facet, data) {
     layout$SCALE_Y <- if (facet$free$y) layout$ROW else 1L
   } else {
     # ggplot2.SparkR with DataFrame
-    layout <- layout.SparkR_grid(data, facet$rows, facet$cols, facet$margins,
+    layout <- layout_grid.SparkR(data, facet$rows, facet$cols, facet$margins,
 				drop = facet$drop, as.table = facet$as.table)
     
     layout <- SparkR::mutate(layout, SCALE_X = cast(isNull(layout[[1]]), "integer") + 1, 
@@ -243,7 +243,7 @@ facet_map_layout.grid <- function(facet, data, layout) {
     locate_grid(data, layout, facet$rows, facet$cols, facet$margins)
   else
     # ggplot2.SparkR with DataFrame
-    locate.SparkR_grid(data, layout, facet$rows, facet$cols, facet$margins)
+    locate_grid.SparkR(data, layout, facet$rows, facet$cols, facet$margins)
 }
 
 #' @export

@@ -345,6 +345,8 @@ scale_limits.default <- function(scale) {
 scale_expand <- function(scale) UseMethod("scale_expand")
 #' @export
 scale_expand.default <- function(scale) {
+  print("Hi")
+  print(scale$expand)
   if (is.waive(scale$expand)) c(0, 0)
   else scale$expand
 }
@@ -361,6 +363,10 @@ scale_dimension.continuous  <- function(scale, expand = scale_expand(scale)) {
 }
 #' @export
 scale_dimension.discrete <- function(scale, expand = scale_expand(scale)) {
+  print("Hi2")
+  print(length(scale_limits(scale)))
+  print(expane[1])
+  print(expand[2])
   expand_range(length(scale_limits(scale)), expand[1], expand[2])
 }
 

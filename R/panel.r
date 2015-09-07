@@ -96,7 +96,7 @@ train_position <- function(panel, data, x_scale, y_scale) {
   panel
 }
 
-train.SparkR_position <- function(panel, data, x_scale, y_scale) {
+train_position.SparkR <- function(panel, data, x_scale, y_scale) {
   # Initialise scales if needed, and possible.
   if (is.null(panel$x_scales) && !is.null(x_scale)) {
     panel$x_scales <- rlply(1, scale_clone(x_scale))
@@ -110,19 +110,20 @@ train.SparkR_position <- function(panel, data, x_scale, y_scale) {
   # continuous : max, min value
   # discrete : unique value of column
 
-  if (!is.null(x_scale) && length(grep("x", columns(data))) != 0) {
+  if (!is.null(x_scale) && length(grep("x", columns(data))) != 0 && is.null(panel$x_scales[[1]]$range$range)) {
     if(panel$x_scales[[1]]$scale_name == "position_c") {
-      panel$x_scales[[1]]$range <- select(data, min(data$x), max(data$x))
+      panel$x_scales[[1]]$range$range <- as.numeric(collect(select(data, min(data$x), max(data$x))))
+      panel$x_scales[[1]]$range$check <- TRUE
     } else if(panel$x_scales[[1]]$scale_name == "position_d") {
-      panel$x_scales[[1]]$range <- distinct(select(data, data$x))
+      panel$x_scales[[1]]$range$range <- collect(distinct(select(data, data$x)))[[1]]
     }
   }
 
-  if (!is.null(y_scale) && length(grep("y", columns(data))) != 0) {
+  if (!is.null(y_scale) && length(grep("y", columns(data))) != 0 && is.null(panel$y_scales[[1]]$range$range)) {
     if(panel$y_scales[[1]]$scale_name == "position_c") {
-      panel$x_scales[[1]]$range <- select(data, min(data$x), max(data$x))
+      panel$y_scales[[1]]$range$range <- as.numeric(collect(select(data, min(data$y), max(data$y))))
     } else if(panel$y_scales[[1]]$scale_name == "position_d") {
-      panel$x_scales[[1]]$range <- distinct(select(data, data$x))
+      panel$y_scales[[1]]$range$range <- collect(distinct(select(data, data$y)))[[1]]
     }
   }
   
@@ -167,7 +168,34 @@ map_position <- function(panel, data, x_scale, y_scale) {
   })
 }
 
-map.SparkR_position <- function(data) {
+map_position.SparkR_test <- function(data) {
+  data_and_types <- dtypes(data)
+
+  for(pair in data_and_types) {
+    if(pair[1] == "x" && pair[2] == "string") {
+      distinct <- distinct(select(data, "x"))
+      distinct <- SparkR::rename(distinct, x_new = distinct$x)
+     
+      index <- 0
+      repeat {
+        index <- index + 1
+        new_df <- limit(distinct, index)
+
+        if(index == 1) old_df <- new_df
+        else {
+          temp_df <- new_df
+          new_df <- except(new_df, old_df)
+          old_df <- temp_df
+        }
+
+        new_df <- SparkR::rename(new_df, x_join = new_df$x)
+        test_df <- SparkR::join(distinct, new_df, distinct$x_new == new_df$x_join, "outer")
+      }
+    }
+  }
+}
+
+map_position.SparkR <- function(data) {
   data_and_types <- dtypes(data)
 
   for(pair in data_and_types) {
@@ -270,7 +298,7 @@ calculate_stats <- function(panel, data, layers) {
   })
 }
 
-calculate.SparkR_stats <- function(data, layers) {
+calculate_stats.SparkR <- function(data, layers) {
   stat_type <- layers[[1]]$stat$objname
   switch(stat_type, 
     bin = {
@@ -285,8 +313,10 @@ calculate.SparkR_stats <- function(data, layers) {
                                    ncount = data$count / abs(data$count),
                                    width = data$count * 0 + width)
       
-      max_density <- collect(select(data, max(abs(data$density))))[[1]]
-      data <- withColumn(data, "ndensity", data$density / max_density)
+      max_density <- select(data, max(abs(data$density)))
+      max_density <- SparkR::rename(max_density, max_density = max_density[[1]])
+      temp_df <- SparkR::join(data, max_density)
+      data <- withColumn(temp_df, "ndensity", temp_df$density / temp_df$max_density)
     },
     bin2d = {
       bins_null <- layers[[1]]$stat_params$bins
@@ -326,8 +356,10 @@ calculate.SparkR_stats <- function(data, layers) {
       else
         data <- SparkR::count(groupBy(data, "PANEL", "group", "xmin", "xmax", "ymin", "ymax"))
 
-      sum_count <- collect(select(data, sum(data$count)))[[1]]
-      data <- withColumn(data, "density", data$count / sum_count)
+      sum_count <- select(data, sum(data$count))
+      sum_count <- SparkR::rename(sum_count, sum_count = sum_count[[1]])
+      temp_df <- SparkR::join(data, sum_count)
+      data <- withColumn(temp_df, "density", temp_df$count / temp_df$sum_count)
     },
     boxplot = {
       qs <- c(0, 0.25, 0.5, 0.75, 1)

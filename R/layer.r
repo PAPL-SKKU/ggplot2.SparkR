@@ -249,9 +249,41 @@ Layer <- proto(expr = {
   class <- function(.) "layer"
 })
 
-adjust_position <- function(data, layers) {
-  position <- layers[[1]]$position$objname
+compute_aesthetics.SparkR <- function(df, plot) {
+  values <- as.character(unlist(plot$mapping))
+  keys <- names(plot$mapping)
+  data <- select(df, append(as.list(values), "PANEL"))
 
+  for(index in 1:length(keys)) {
+    if(keys[index] == "group") keys[index] <- "grouped"
+    data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
+  }
+
+  scales_add_defaults(plot$scales, data, plot$mapping, plot$plot_env)
+  data
+}
+
+map_statistic.SparkR <- function(data, plot) {
+  layers <- plot$layers[[1]]
+  aesthetics <- layers$mapping
+
+  if(layers$inherit.aes) aesthetics <- defaults(aesthetics, plot$mapping)
+
+  aesthetics <- defaults(aesthetics, layers$stat$default_aes())
+  aesthetics <- compact(aesthetics)
+
+  new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
+
+  if(length(new) == 0) return(data)
+
+  data <- withColumn(data, names(new), data[[as.character(new)]])
+
+  data
+}
+
+adjust_position.SparkR <- function(data, layers) {
+  position <- layers[[1]]$position$objname
+  
   switch(position, 
     dodge = {
       count_data <- collect(SparkR::count(groupBy(data, "x")))

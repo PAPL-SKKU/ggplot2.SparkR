@@ -39,7 +39,7 @@ layout_grid <- function(data, rows = NULL, cols = NULL, margins = NULL, drop = T
   panels
 }
 
-layout.SparkR_grid <- function(data, rows = NULL, cols = NULL, margins = NULL, drop = TRUE, as.table = TRUE) {
+layout_grid.SparkR <- function(data, rows = NULL, cols = NULL, margins = NULL, drop = TRUE, as.table = TRUE) {
   if(length(rows) == 0 && length(cols) == 0) return(layout_null())
 
   rows_char <- as.character(rows)
@@ -159,7 +159,7 @@ layout_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = 
   panels
 }
   
-layout.SparkR_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = TRUE, drop = TRUE) {
+layout_wrap.SparkR <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = TRUE, drop = TRUE) {
   vars <- as.character(unlist(vars))
   if(length(vars) == 0) stop("Error: No variable for calculate")
 

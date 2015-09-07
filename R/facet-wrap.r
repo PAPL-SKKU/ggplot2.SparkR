@@ -86,7 +86,7 @@ facet_train_layout.wrap <- function(facet, data) {
     panels$AXIS_X <- if (facet$free$x) TRUE else panels$ROW == nrow
     panels$AXIS_Y <- if (facet$free$y) TRUE else panels$COL == 1
   } else {
-    panels <- layout.SparkR_wrap(data, facet$facets, facet$nrow, facet$ncol, 
+    panels <- layout_wrap.SparkR(data, facet$facets, facet$nrow, facet$ncol, 
        facet$as.table, facet$drop)
     
     nrow <- panels$nrow
@@ -110,7 +110,7 @@ facet_map_layout.wrap <- function(facet, data, layout) {
   if(length(grep("DataFrame", data_class)) == 0)
     locate_wrap(data, layout, facet$facets)
   else
-    locate.SparkR_wrap(data, layout, facet$facets)
+    locate_wrap.SparkR(data, layout, facet$facets)
 }
 
 # How to think about facet wrap:

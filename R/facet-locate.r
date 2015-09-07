@@ -49,7 +49,7 @@ locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE)
   data[order(data$PANEL), , drop = FALSE]
 }
 
-locate.SparkR_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE) {
+locate_grid.SparkR <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE) {
   rows_char <- as.character(rows)
   cols_char <- as.character(cols)
   
@@ -104,7 +104,7 @@ locate_wrap <- function(data, panels, vars) {
   data[order(data$PANEL), ]
 }
 
-locate.SparkR_wrap <- function(data, panels, vars) {
+locate_wrap.SparkR <- function(data, panels, vars) {
   vars <- as.character(unlist(vars))
   panels <- withColumnRenamed(panels, eval(vars), "init")
 

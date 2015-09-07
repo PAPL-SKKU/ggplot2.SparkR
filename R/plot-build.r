@@ -84,7 +84,7 @@ ggplot_build <- function(plot) {
   list(data = data, panel = panel, plot = plot)
 }
 
-ggplot.SparkR_build <- function(plot) {
+ggplot_build.SparkR <- function(plot) {
   if(length(plot$layers)==0) stop("No layers in plot", call.=FALSE)
 
   plot <- plot_clone(plot)
@@ -95,80 +95,65 @@ ggplot.SparkR_build <- function(plot) {
   scales <- plot$scales
   
   panel <- new_panel()
+  print("stage 1")
   panel <- train_layout(panel, plot$facet, layer_data, plot$data)
+  print("stage 2")
   data <- facet_map_layout(plot$facet, plot$data, panel$layout)
 
-  data <- compute_aesthetics(data, plot)
+  print("stage 3")
+  data <- compute_aesthetics.SparkR(data, plot)
   # Need to optimize
-  data <- add.SparkR_group(data)
-
-  data <- scales.SparkR_transform_df(scales, data)
+  print("stage 4")
+  data <- add_group.SparkR(data)
+  cache(data)
+  print("stage 5")
+  data <- scales_transform_df.SparkR(scales, data)
 
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
 
-  panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
+  print("stage 6")
+  panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
   # Need to optimize
-  data <- map.SparkR_position(data)
+  print("stage 7")
+  data <- map_position.SparkR(data)
+  cache(data)
+
+  print("stage 8")
+  data <- calculate_stats.SparkR(data, layers)
+  print("stage 9")
+  data <- map_statistic.SparkR(data, plot)
   
-  data <- calculate.SparkR_stats(data, layers)
-  data <- map_statistic(data, plot)
-  
+  print("stage 10")
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
   
-  data <- reparameterise(data, plot)
+  print("stage 11")
+  data <- reparameterise.SparkR(data, plot)
   # Need to optimize
-  data <- adjust_position(data, layers)
+  print("stage 12")
+  data <- adjust_position.SparkR(data, layers)
   
-  reset_scales(panel)
-  panel <- train.SparkR_position(panel, data, scale_x(), scale_y())
-  # Need to optimize
-  data <- map.SparkR_position(data)
+  print("stage 13")
+  #reset_scales(panel)
+  print("stage 14")
+  panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
+  print("stage 15")
+  data <- map_position.SparkR(data)
 
-  data <- scales.SparkR_transform_df(scales, data)
+  print("stage 16")
+  data <- scales_transform_df.SparkR(scales, data)
 
-  stop("ggplot.SparkR_build")
-  # Need to collect all data?
- # panel <- train_ranges(panel, plot$coordinates)
+  print("stage 17")
+  data <- collect(data)
+  panel$layout <- collect(panel$layout)
+  
+  print("stage 18")
+  panel <- train_ranges(panel, plot$coordinates)
  
-  list(data = data, panel = panel, plot = plot)
+  list(data = list(data), panel = panel, plot = plot)
 }
 
-compute_aesthetics <- function(df, plot) {
-  values <- as.character(unlist(plot$mapping))
-  keys <- names(plot$mapping)
-  data <- select(df, append(as.list(values), "PANEL"))
-  
-  for(index in 1:length(keys)) {
-    if(keys[index] == "group") keys[index] <- "grouped"
-    data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
-  }
-  
-  scales_add_defaults(plot$scales, data, plot$mapping, plot$plot_env)
-  data
-}
-
-map_statistic <- function(data, plot) {
-  # Assemble aesthetics from ayer, plot and stat mappings
-  layers <- plot$layers[[1]]
-  aesthetics <- layers$mapping
-
-  if(layers$inherit.aes)  aesthetics <- defaults(aesthetics, plot$mapping)
-  
-  aesthetics <- defaults(aesthetics, layers$stat$default_aes())
-  aesthetics <- compact(aesthetics)
-
-  new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
-  
-  if(length(new) == 0)  return(data)
-  
-  # Add map stat output to aesthetics
-  data <- withColumn(data, names(new), data[[as.character(new)]])
-  
-  data
-}
-
-reparameterise <- function(data, plot) {
+reparameterise.SparkR <- function(data, plot) {
   objname <- plot$layers[[1]]$geom$objname
 
   switch(objname, 

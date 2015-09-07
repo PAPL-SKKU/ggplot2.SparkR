@@ -63,7 +63,7 @@ isDiscrete <- function(data) {
   column_arr
 }
 
-add.SparkR_group <- function(data) {
+add_group.SparkR <- function(data) {
   discrete_col <- isDiscrete(data)
   filter_cmd <- 'filter(data, data[["PANEL"]] == disc[["PANEL"]][index]'
   

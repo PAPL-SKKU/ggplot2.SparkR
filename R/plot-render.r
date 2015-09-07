@@ -57,8 +57,10 @@ ggplot_gtable <- function(data) {
   xlabel <- element_render(theme, "axis.title.x", labels$x)
   ylabel <- element_render(theme, "axis.title.y", labels$y)
 
+  print("stage 22")
   panel_dim <-  find_panel(plot_table)
 
+  print("stage 23")
   xlab_height <- grobHeight(xlabel) +
     if (is.null(labels$x)) unit(0, "lines") else unit(0.5, "lines")
   plot_table <- gtable_add_rows(plot_table, xlab_height)
@@ -207,9 +209,16 @@ print.ggplot.SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
   set_last_plot(x)
   if(newpage) grid.newpage()
   
-  data <- ggplot.SparkR_build(x)
+  data <- ggplot_build.SparkR(x)
 
-  showDF(data$data)
+  gtable <- ggplot_gtable(data)
+  if(is.null(vp)) {
+     grid.draw(gtable)
+  } else {
+    if (is.character(vp)) seekViewport(vp) else pushViewport(vp)
+    grid.draw(gtable)
+    upViewport()
+  }
 #  print("End")
 #  return(data)
 }

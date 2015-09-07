@@ -72,7 +72,7 @@ scales_transform_df <- function(scales, df) {
   quickdf(c(transformed, df[setdiff(names(df), names(transformed))]))
 }
 
-scales.SparkR_transform_df <- function(scales, data) { 
+scales_transform_df.SparkR <- function(scales, data) { 
   for(index in 1:length(scales$scales)) {
     scale_type <- scales$scales[[index]]$trans$name
     done <- scales$scales[[index]]$trans$done
