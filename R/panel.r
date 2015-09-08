@@ -113,7 +113,6 @@ train_position.SparkR <- function(panel, data, x_scale, y_scale) {
   if (!is.null(x_scale) && length(grep("x", columns(data))) != 0 && is.null(panel$x_scales[[1]]$range$range)) {
     if(panel$x_scales[[1]]$scale_name == "position_c") {
       panel$x_scales[[1]]$range$range <- as.numeric(collect(select(data, min(data$x), max(data$x))))
-      panel$x_scales[[1]]$range$check <- TRUE
     } else if(panel$x_scales[[1]]$scale_name == "position_d") {
       panel$x_scales[[1]]$range$range <- collect(distinct(select(data, data$x)))[[1]]
     }
@@ -303,7 +302,6 @@ calculate_stats.SparkR <- function(data, layers) {
   switch(stat_type, 
     bin = {
       width <- if(is.null(layers[[1]]$stat_params$width)) 0.9 else layers[[1]]$stat_params$width
-
       if(length(grep("fill", columns(data))))
         data <- SparkR::count(groupBy(data, "x", "PANEL", "group", "fill"))
       else
@@ -325,7 +323,6 @@ calculate_stats.SparkR <- function(data, layers) {
       binwidth <- collect(select(data, (max(data$x) - min(data$x)) / bins, (max(data$y) - min(data$y)) / bins))
       range <- collect(select(data, min(data$x), max(data$x), min(data$y), max(data$y)))
       origin <- unlist(range[c(-2, -4)])
-
       breaks <- list(
         x = seq(origin[1], range[[2]] + binwidth[[1]], binwidth[[1]]),
         y = seq(origin[2], range[[4]] + binwidth[[2]], binwidth[[2]])

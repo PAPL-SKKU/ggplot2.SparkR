@@ -80,7 +80,8 @@ ggplot_build <- function(plot) {
   
   # Train coordinate system
   panel <- train_ranges(panel, plot$coordinates)
-  
+  data[[1]]$outliers <- NULL
+  print(data)
   list(data = data, panel = panel, plot = plot)
 }
 
@@ -149,7 +150,7 @@ ggplot_build.SparkR <- function(plot) {
   
   print("stage 18")
   panel <- train_ranges(panel, plot$coordinates)
- 
+  
   list(data = list(data), panel = panel, plot = plot)
 }
 

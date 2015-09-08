@@ -57,10 +57,8 @@ ggplot_gtable <- function(data) {
   xlabel <- element_render(theme, "axis.title.x", labels$x)
   ylabel <- element_render(theme, "axis.title.y", labels$y)
 
-  print("stage 22")
   panel_dim <-  find_panel(plot_table)
 
-  print("stage 23")
   xlab_height <- grobHeight(xlabel) +
     if (is.null(labels$x)) unit(0, "lines") else unit(0.5, "lines")
   plot_table <- gtable_add_rows(plot_table, xlab_height)
