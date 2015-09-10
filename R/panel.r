@@ -112,17 +112,17 @@ train_position.SparkR <- function(panel, data, x_scale, y_scale) {
 
   if (!is.null(x_scale) && length(grep("x", columns(data))) != 0 && is.null(panel$x_scales[[1]]$range$range)) {
     if(panel$x_scales[[1]]$scale_name == "position_c") {
-      panel$x_scales[[1]]$range$range <- as.numeric(collect(select(data, min(data$x), max(data$x))))
+      panel$x_scales[[1]]$range$range <- select(data, min(data$x), max(data$x))
     } else if(panel$x_scales[[1]]$scale_name == "position_d") {
-      panel$x_scales[[1]]$range$range <- collect(distinct(select(data, data$x)))[[1]]
+      panel$x_scales[[1]]$range$range <- distinct(select(data, data$x))
     }
   }
 
   if (!is.null(y_scale) && length(grep("y", columns(data))) != 0 && is.null(panel$y_scales[[1]]$range$range)) {
     if(panel$y_scales[[1]]$scale_name == "position_c") {
-      panel$y_scales[[1]]$range$range <- as.numeric(collect(select(data, min(data$y), max(data$y))))
+      panel$y_scales[[1]]$range$range <- select(data, min(data$y), max(data$y))
     } else if(panel$y_scales[[1]]$scale_name == "position_d") {
-      panel$y_scales[[1]]$range$range <- collect(distinct(select(data, data$y)))[[1]]
+      panel$y_scales[[1]]$range$range <- distinct(select(data, data$y))
     }
   }
   
@@ -167,34 +167,64 @@ map_position <- function(panel, data, x_scale, y_scale) {
   })
 }
 
-map_position.SparkR_test <- function(data) {
+map_position.SparkR <- function(data) {
   data_and_types <- dtypes(data)
 
   for(pair in data_and_types) {
     if(pair[1] == "x" && pair[2] == "string") {
       distinct <- distinct(select(data, "x"))
       distinct <- SparkR::rename(distinct, x_new = distinct$x)
-     
-      index <- 0
-      repeat {
-        index <- index + 1
+      # overhead
+      distinct_value <- SparkR::count(distinct)
+
+      for(index in 1:distinct_value) {
         new_df <- limit(distinct, index)
 
         if(index == 1) old_df <- new_df
         else {
-          temp_df <- new_df
+	  temp_df <- new_df
           new_df <- except(new_df, old_df)
-          old_df <- temp_df
+          old_df <- new_df
         }
 
-        new_df <- SparkR::rename(new_df, x_join = new_df$x)
-        test_df <- SparkR::join(distinct, new_df, distinct$x_new == new_df$x_join, "outer")
+        temp_df <- withColumn(new_df, "x", cast(isNull(new_df[[1]]), "integer") + index)
+
+        if(index > 1) unioned <- unionAll(unioned, temp_df)
+        else          unioned <- temp_df
       }
+
+      data <- SparkR::rename(data, x_old = data$x)
+      data <- SparkR::join(data, unioned, data$x_old == unioned$x_new, "inner")
+    } else if(pair[1] == "y" && pair[2] == "string") {
+      distinct <- distinct(select(data, "y"))
+      distinct <- SparkR::rename(distinct, y_new = distinct$y)
+      # overhead
+      distinct_value <- SparkR::count(distinct)
+
+      for(index in 1:distinct_value) {
+        new_df <- limit(distinct, index)
+
+        if(index == 1) old_df <- new_df
+        else {
+	  temp_df <- new_df
+          new_df <- except(new_df, old_df)
+          old_df <- new_df
+        }
+
+        temp_df <- withColumn(new_df, "y", cast(isNull(new_df[[1]]), "integer") + index)
+        if(index > 1) unioned <- unionAll(unioned, temp_df)
+        else          unioned <- temp_df
+      }
+      
+      data <- SparkR::rename(data, y_old = data$y)
+      data <- SparkR::join(data, unioned, data$y_old == unioned$y_new, "inner")
     }
   }
+
+  data
 }
 
-map_position.SparkR <- function(data) {
+map_position.SparkR_test <- function(data) {
   data_and_types <- dtypes(data)
 
   for(pair in data_and_types) {

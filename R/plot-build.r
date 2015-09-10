@@ -80,8 +80,7 @@ ggplot_build <- function(plot) {
   
   # Train coordinate system
   panel <- train_ranges(panel, plot$coordinates)
-  data[[1]]$outliers <- NULL
-  print(data)
+  
   list(data = data, panel = panel, plot = plot)
 }
 
@@ -96,62 +95,75 @@ ggplot_build.SparkR <- function(plot) {
   scales <- plot$scales
   
   panel <- new_panel()
-  print("stage 1")
   panel <- train_layout(panel, plot$facet, layer_data, plot$data)
-  print("stage 2")
   data <- facet_map_layout(plot$facet, plot$data, panel$layout)
 
-  print("stage 3")
   data <- compute_aesthetics.SparkR(data, plot)
-  # Need to optimize
-  print("stage 4")
   data <- add_group.SparkR(data)
-  cache(data)
-  print("stage 5")
   data <- scales_transform_df.SparkR(scales, data)
 
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
 
-  print("stage 6")
   panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
-  # Need to optimize
-  print("stage 7")
   data <- map_position.SparkR(data)
   cache(data)
 
-  print("stage 8")
   data <- calculate_stats.SparkR(data, layers)
-  print("stage 9")
   data <- map_statistic.SparkR(data, plot)
   
-  print("stage 10")
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
   
-  print("stage 11")
   data <- reparameterise.SparkR(data, plot)
-  # Need to optimize
-  print("stage 12")
   data <- adjust_position.SparkR(data, layers)
   
-  print("stage 13")
-  #reset_scales(panel)
-  print("stage 14")
   panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
-  print("stage 15")
   data <- map_position.SparkR(data)
 
-  print("stage 16")
   data <- scales_transform_df.SparkR(scales, data)
 
-  print("stage 17")
   data <- collect(data)
-  panel$layout <- collect(panel$layout)
-  
-  print("stage 18")
-  panel <- train_ranges(panel, plot$coordinates)
+  panel <- train_ranges.SparkR(panel, plot)
   
   list(data = list(data), panel = panel, plot = plot)
+}
+
+train_ranges.SparkR <- function(panel, plot) {
+  panel$layout <- collect(panel$layout)
+  x_scale_name <- panel$x_scales[[1]]$scale_name
+  y_scale_name <- panel$y_scales[[1]]$scale_name
+
+  if(x_scale_name == "position_d" && y_scale_name == "position_d") {
+    panel$x_scales[[1]]$range$range <- collect(panel$x_scales[[1]]$range$range)[[1]]
+    panel$y_scales[[1]]$range$range <- collect(panel$y_scales[[1]]$range$range)[[1]]
+  } else if(x_scale_name == "position_d" && y_scale_name == "position_c") {
+    y_range1 <- select(panel$y_scales[[1]]$range$range, "MIN(y)")
+    y_range2 <- select(panel$y_scales[[1]]$range$range, "MAX(y)")
+    range <- unionAll(y_range1, y_range2)
+    range <- unionAll(range, panel$x_scales[[1]]$range$range)
+    range <- collect(range)
+
+    panel$x_scales[[1]]$range$range <- as.character(range[-c(1:2), ])
+    panel$y_scales[[1]]$range$range <- as.numeric(range[1:2, ])
+  } else if(x_scale_name == "position_c" && y_scale_name == "position_d") {
+    x_range1 <- select(panel$x_scales[[1]]$range$range, "MIN(x)")
+    x_range2 <- select(panel$x_scales[[1]]$range$range, "MAX(x)")
+    range <- unionAll(x_range1, x_range2)
+    range <- unionAll(range, panel$y_scales[[1]]$range$range)
+    range <- collect(range)
+
+    panel$x_scales[[1]]$range$range <- as.numeric(range[1:2, ])
+    panel$y_scales[[1]]$range$range <- as.character(range[-c(1:2), ])
+  } else if(x_scale_name == "position_c" && y_scale_name == "position_c") {
+    range <- unionAll(panel$x_scales[[1]]$range$range, panel$y_scales[[1]]$range$range)
+    range <- collect(range)
+
+    panel$x_scales[[1]]$range$range <- as.numeric(range[1, ])
+    panel$y_scales[[1]]$range$range <- as.numeric(range[2, ])
+  }
+
+  panel <- train_ranges(panel, plot$coordinates)
+  panel
 }
 
 reparameterise.SparkR <- function(data, plot) {
