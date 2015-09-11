@@ -411,7 +411,8 @@ calculate_stats.SparkR <- function(data, layers) {
                      upper = min(data$y)+(max(data$y)-min(data$y))*qs[4],
                      ymax = max(data$y), iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
                      relvarwidth = sqrt(sum(cast(isNotNull(data$y), "integer"))))
- 
+
+      # How to calculate "outliers" column?
       #outliers <- withColumn(stats, "outliers", stats$y < (stats$lower - coef * stats$iqr) | stats$y > (stats$upper + coef * stats$iqr))
 
       stats <- SparkR::mutate(stats, width = stats$ymin * 0 + width,

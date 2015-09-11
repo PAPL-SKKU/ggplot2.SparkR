@@ -113,7 +113,6 @@ bin <- function(x, weight=NULL, binwidth=NULL, origin=NULL, breaks=NULL, range=N
       fuzz <- c(rep.int(-diddle, length(breaks) - 1), diddle)
     }
     fuzzybreaks <- sort(breaks) + fuzz
-
     bins <- cut(x, fuzzybreaks, include.lowest=TRUE, right = right)
     left <- breaks[-length(breaks)]
     right <- breaks[-1]
@@ -126,7 +125,7 @@ bin <- function(x, weight=NULL, binwidth=NULL, origin=NULL, breaks=NULL, range=N
     x = x,
     width = width
   )
-
+  
   if (sum(results$count, na.rm = TRUE) == 0) {
     return(results)
   }
