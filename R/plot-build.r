@@ -168,8 +168,9 @@ train_ranges.SparkR <- function(panel, plot) {
 
 reparameterise.SparkR <- function(data, plot) {
   objname <- plot$layers[[1]]$geom$objname
-
+  
   switch(objname, 
+    histogram = ,
     bar = {
       data <- SparkR::mutate(data, ymin = data$y * 0, ymax = data$y,
                                    xmin = data$x - (data$width / 2), xmax = data$x + (data$width / 2))
