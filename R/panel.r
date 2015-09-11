@@ -176,23 +176,22 @@ map_position.SparkR <- function(data) {
       distinct <- SparkR::rename(distinct, x_new = distinct$x)
       # overhead
       distinct_value <- SparkR::count(distinct)
-
+      
       for(index in 1:distinct_value) {
         new_df <- limit(distinct, index)
-
+        
         if(index == 1) old_df <- new_df
         else {
 	  temp_df <- new_df
           new_df <- except(new_df, old_df)
-          old_df <- new_df
+          old_df <- temp_df
         }
-
+ 
         temp_df <- withColumn(new_df, "x", cast(isNull(new_df[[1]]), "integer") + index)
 
         if(index > 1) unioned <- unionAll(unioned, temp_df)
         else          unioned <- temp_df
       }
-
       data <- SparkR::rename(data, x_old = data$x)
       data <- SparkR::join(data, unioned, data$x_old == unioned$x_new, "inner")
     } else if(pair[1] == "y" && pair[2] == "string") {
@@ -208,7 +207,7 @@ map_position.SparkR <- function(data) {
         else {
 	  temp_df <- new_df
           new_df <- except(new_df, old_df)
-          old_df <- new_df
+          old_df <- temp_df
         }
 
         temp_df <- withColumn(new_df, "y", cast(isNull(new_df[[1]]), "integer") + index)
@@ -220,7 +219,7 @@ map_position.SparkR <- function(data) {
       data <- SparkR::join(data, unioned, data$y_old == unioned$y_new, "inner")
     }
   }
-
+  
   data
 }
 
@@ -336,7 +335,7 @@ calculate_stats.SparkR <- function(data, layers) {
         data <- SparkR::count(groupBy(data, "x", "PANEL", "group", "fill"))
       else
         data <- SparkR::count(groupBy(data, "x", "PANEL", "group"))
-      
+     
       data <- SparkR::mutate(data, density = data$count / abs(data$count) / width,
                                    ncount = data$count / abs(data$count),
                                    width = data$count * 0 + width)

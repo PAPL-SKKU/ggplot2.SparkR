@@ -49,7 +49,7 @@ ggplot_build <- function(plot) {
 
   panel <- train_position(panel, data, scale_x(), scale_y())
   data <- map_position(panel, data, scale_x(), scale_y())
-
+  
   # Apply and map statistics
   data <- calculate_stats(panel, data, layers)
   data <- dlapply(function(d, p) p$map_statistic(d, plot))

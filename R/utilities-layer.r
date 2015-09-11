@@ -22,7 +22,7 @@ add_group <- function(data) {
   } else {
     data$group <- id(data["group"], drop = TRUE)
   }
-  
+  print(data) 
   data
 }
 
