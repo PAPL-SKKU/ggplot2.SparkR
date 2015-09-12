@@ -194,7 +194,12 @@ map_position.SparkR <- function(data) {
       }
       data <- SparkR::rename(data, x_old = data$x)
       data <- SparkR::join(data, unioned, data$x_old == unioned$x_new, "inner")
-    } else if(pair[1] == "y" && pair[2] == "string") {
+    } else if(pair[1] == "x" && pair[2] == "int") {
+      data <- SparkR::rename(data, x_map = data$x)
+      data <- SparkR::withColumn(data, "x", cast(data$x_map, "double"))
+    }
+
+    if(pair[1] == "y" && pair[2] == "string") {
       distinct <- distinct(select(data, "y"))
       distinct <- SparkR::rename(distinct, y_new = distinct$y)
       # overhead
@@ -217,51 +222,12 @@ map_position.SparkR <- function(data) {
       
       data <- SparkR::rename(data, y_old = data$y)
       data <- SparkR::join(data, unioned, data$y_old == unioned$y_new, "inner")
+    } else if(pair[1] == "y" && pair[2] == "int") {
+      data <- SparkR::rename(data, y_map = data$y)
+      data <- SparkR::withColumn(data, "y", cast(data$y_map, "double"))
     }
   }
   
-  data
-}
-
-map_position.SparkR_test <- function(data) {
-  data_and_types <- dtypes(data)
-
-  for(pair in data_and_types) {
-    if(pair[1] == "x" && pair[2] == "string") {
-      distinct <- distinct(select(data, "x"))
-      distinct <- SparkR::rename(distinct, x_new = distinct$x)
-      # overhead
-      distinct_value <- collect(distinct)[[1]]
-
-      for(index in 1:length(distinct_value)) {
-        temp_df <- SparkR::filter(distinct, distinct[[1]] == distinct_value[index])
-        temp_df <- withColumn(temp_df, "x", cast(isNull(distinct[[1]]), "integer") + index)
-
-        if(index > 1) unioned <- unionAll(unioned, temp_df)
-        else          unioned <- temp_df
-      }
-
-      data <- SparkR::rename(data, x_old = data$x)
-      data <- SparkR::join(data, unioned, data$x_old == unioned$x_new, "inner")
-    } else if(pair[1] == "y" && pair[2] == "string") {
-      distinct <- distinct(select(data, "y"))
-      distinct <- SparkR::rename(distinct, y_new = distinct$y)
-      # overhead
-      distinct_value <- collect(distinct)[[1]]
-
-      for(index in 1:length(distinct_value)) {
-        temp_df <- SparkR::filter(distinct, distinct[[1]] == distinct_value[index])
-        temp_df <- withColumn(temp_df, "y", cast(isNull(distinct[[1]]), "integer") + index)
-
-        if(index > 1) unioned <- unionAll(unioned, temp_df)
-        else          unioned <- temp_df
-      }
-
-      data <- SparkR::rename(data, y_old = data$y)
-      data <- SparkR::join(data, unioned, data$y_old == unioned$y_new, "inner")
-    }
-  }
- 
   data
 }
 
@@ -309,6 +275,44 @@ train_ranges <- function(panel, coord) {
   panel
 }
 
+train_ranges.SparkR <- function(panel, plot) {
+  panel$layout <- collect(panel$layout)
+  x_scale_name <- panel$x_scales[[1]]$scale_name
+  y_scale_name <- panel$y_scales[[1]]$scale_name
+
+  if(x_scale_name == "position_d" && y_scale_name == "position_d") {
+    panel$x_scales[[1]]$range$range <- collect(panel$x_scales[[1]]$range$range)[[1]]
+    panel$y_scales[[1]]$range$range <- collect(panel$y_scales[[1]]$range$range)[[1]]
+  } else if(x_scale_name == "position_d" && y_scale_name == "position_c") {
+    y_range1 <- select(panel$y_scales[[1]]$range$range, "MIN(y)")
+    y_range2 <- select(panel$y_scales[[1]]$range$range, "MAX(y)")
+    range <- unionAll(y_range1, y_range2)
+    range <- unionAll(range, panel$x_scales[[1]]$range$range)
+    range <- collect(range)
+
+    panel$x_scales[[1]]$range$range <- as.character(range[-c(1:2), ])
+    panel$y_scales[[1]]$range$range <- as.numeric(range[1:2, ])
+  } else if(x_scale_name == "position_c" && y_scale_name == "position_d") {
+    x_range1 <- select(panel$x_scales[[1]]$range$range, "MIN(x)")
+    x_range2 <- select(panel$x_scales[[1]]$range$range, "MAX(x)")
+    range <- unionAll(x_range1, x_range2)
+    range <- unionAll(range, panel$y_scales[[1]]$range$range)
+    range <- collect(range)
+
+    panel$x_scales[[1]]$range$range <- as.numeric(range[1:2, ])
+    panel$y_scales[[1]]$range$range <- as.character(range[-c(1:2), ])
+  } else if(x_scale_name == "position_c" && y_scale_name == "position_c") {
+    range <- unionAll(panel$x_scales[[1]]$range$range, panel$y_scales[[1]]$range$range)
+    range <- collect(range)
+
+    panel$x_scales[[1]]$range$range <- as.numeric(range[1, ])
+    panel$y_scales[[1]]$range$range <- as.numeric(range[2, ])
+  }
+
+  panel <- train_ranges(panel, plot$coordinates)
+  panel
+}
+
 # Calculate statistics
 #
 # @param layers list of layers
@@ -331,11 +335,56 @@ calculate_stats.SparkR <- function(data, layers) {
   switch(stat_type, 
     bin = {
       width <- if(is.null(layers[[1]]$stat_params$width)) 0.9 else layers[[1]]$stat_params$width
-      if(length(grep("fill", columns(data))))
-        data <- SparkR::count(groupBy(data, "x", "PANEL", "group", "fill"))
-      else
-        data <- SparkR::count(groupBy(data, "x", "PANEL", "group"))
+      x_test <- select(data, "x")
+      
+      if(dtypes(x_test)[[1]][2] == "int") {
+        if(length(grep("fill", columns(data))))
+          data <- SparkR::count(groupBy(data, "x", "PANEL", "group", "fill"))
+        else
+          data <- SparkR::count(groupBy(data, "x", "PANEL", "group"))
      
+      } else if(dtypes(x_test)[[1]][2] == "double") {
+        range <- as.numeric(collect(select(data, min(data$x), max(data$x))))
+        binwidth <- if(is.null(layers[[1]]$stat_params$binwidth)) diff(range) / 30
+                    else layers[[1]]$stat_params$binwidth
+  
+        breaks <- layers[[1]]$stat_params$breaks
+        origin <- layers[[1]]$stat_params$origin
+        right <- if(is.null(layers[[1]]$stat_params$right)) TRUE else layers[[1]]$stat_params$right
+
+        if(is.null(breaks)) {
+	  if(is.null(origin)) {
+	    breaks <- fullseq(range, binwidth, pad = TRUE)
+          } else {
+            breaks <- seq(origin, max(range) + binwidth, binwidth)
+          }
+        }
+
+        diddle <- 1e-07 * stats::median(diff(breaks))
+        if(right) {
+          fuzz <- c(-diddle, rep.int(diddle, length(breaks) - 1))
+        } else {
+          fuzz <- c(rep.int(-diddle, length(breaks) - 1), diddle)
+        }
+
+        fuzzybreaks <- sort(breaks) + fuzz
+        width <- diff(breaks)
+        left <- breaks[-length(breaks)]
+        right <- breaks[-1]
+
+        for(index in 1:length(left)) {
+	  filter_df <- filter(data, data$x >= left[index] & data$x < right[index])
+          filter_df <- SparkR::rename(filter_df, x_bin = filter_df$x)
+          filter_df <- withColumn(filter_df, "x", 
+                                  cast(isNull(filter_df$x_bin), "integer") + (left[index] + right[index]) / 2)
+        }
+      
+        if(length(grep("fill", columns(data))))
+          data <- SparkR::count(groupBy(data, "PANEL", "group", "fill", "x"))
+        else
+          data <- SparkR::count(groupBy(data, "PANEL", "group", "x"))
+      }
+      
       data <- SparkR::mutate(data, density = data$count / abs(data$count) / width,
                                    ncount = data$count / abs(data$count),
                                    width = data$count * 0 + width)

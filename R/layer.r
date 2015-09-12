@@ -332,6 +332,48 @@ adjust_position.SparkR <- function(data, layers) {
   data
 }
 
+reparameterise.SparkR <- function(data, plot) {
+  objname <- plot$layers[[1]]$geom$objname
+
+  switch(objname,
+    histogram = , 
+    bar = {
+      data <- SparkR::mutate(data, ymin = data$y * 0, ymax = data$y,
+                                   xmin = data$x - (data$width / 2), xmax = data$x + (data$width / 2))
+
+      if(length(grep("fill", columns(data))) == 0)
+        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density",
+                             "PANEL", "group", "ymin", "ymax", "xmin", "xmax")
+      else
+        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density", "fill",
+                             "PANEL", "group", "ymin", "ymax", "xmin", "xmax")
+    },
+    boxplot = {
+      params <- plot$layers[[1]]$geom_params
+ 
+      if(is.null(params) || is.null(params$varwidth) || 
+         !params$varwidth || length(grep("relvarwidth", columns(data))) == 0) {
+        data <- SparkR::mutate(data, xmin = data$x - data$width / 2, xmax = data$x + data$width / 2)
+      } else {
+        max_relvarwidth <- collect(select(data, max(data$relvarwidth)))[[1]]
+        data <- SparkR::mutate(data, xmin = data$x - (data$ralvarwidth * data$width) / (2 * max_relvarwidth),
+                                     xmax = data$x + (data$relvarwidth * data$width) / (2 * max_relvarwidth))
+      }
+
+      if(length(grep("fill", columns(data))) == 0)
+        data <- select(data, "ymin", "lower", "middle", "upper", "ymax",
+                             "notchupper", "notchlower", "x", "width",
+                             "PANEL", "group", "weight", "xmin", "xmax")
+      else
+        data <- select(data, "ymin", "lower", "middle", "upper", "ymax",
+                             "notchupper", "notchlower", "x", "fill", "width",
+                             "PANEL", "group", "weight", "xmin", "xmax")
+    }
+  )
+
+  data
+}
+
 #' Create a new layer
 #'
 #' @keywords internal

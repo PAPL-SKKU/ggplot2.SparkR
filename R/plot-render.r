@@ -217,9 +217,10 @@ print.ggplot.SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
     grid.draw(gtable)
     upViewport()
   }
-#  print("End")
-#  return(data)
+
+  invisible(data)
 }
+
 #' @rdname print.ggplot
 #' @method plot ggplot
 #' @export
