@@ -128,8 +128,7 @@ layout_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = 
   panels <- cbind(layout, unrowname(base))
   panels <- panels[order(panels$PANEL), , drop = FALSE]
   rownames(panels) <- NULL
-  print(panels)
-  stop("layout_wrap")
+  
   panels
 }
   

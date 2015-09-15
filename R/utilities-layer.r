@@ -13,7 +13,7 @@ add_group <- function(data) {
   if (is.null(data$group)) {
     disc <- vapply(data, is.discrete, logical(1))
     disc[names(disc) == "label"] <- FALSE
-    print(disc)
+    
     if (any(disc)) {
       data$group <- id(data[disc], drop = TRUE)
     } else {
@@ -22,8 +22,6 @@ add_group <- function(data) {
   } else {
     data$group <- id(data["group"], drop = TRUE)
   }
-  print(data)
-  stop("add_group")
   data
 }
 
