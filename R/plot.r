@@ -121,8 +121,7 @@ ggplot.data.frame <- function(data, mapping=aes(), ..., environment = parent.fra
 #' @param environment in which evaluation of aesthetics should occur
 #' @method ggplot DataFrame
 #' @export
-ggplot.DataFrame <- function(df, mapping=aes(), ..., environment = parent.frame(), sqlCtx = NULL) {
-  if (is.null(sqlCtx)) stop("No sqlContext")
+ggplot.DataFrame <- function(df, mapping=aes(), ..., environment = parent.frame()) {
   if (!missing(mapping) && !inherits(mapping, "uneval")) stop("Mapping should be created with aes or aes_string")
   p <- structure(list(
     data = df,
@@ -132,8 +131,7 @@ ggplot.DataFrame <- function(df, mapping=aes(), ..., environment = parent.frame(
     theme = list(),
     coordinates = coord_cartesian(),
     facet = facet_null(),
-    plot_env = environment,
-    sqlContext = sqlCtx
+    plot_env = environment
   ), class = c("gg", "ggplot.SparkR", "ggplot"))
   
   p$labels <- make_labels(mapping)
