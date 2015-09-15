@@ -53,79 +53,52 @@ layout_grid.SparkR <- function(data, rows = NULL, cols = NULL, margins = NULL, d
   # Set unique number for ROW grid
   if(!rows_is_null) {
     rows <- distinct(select(data, eval(rows_char)))
-    for(index in 1:nrow(collect(rows))) {
-      new_df <- limit(rows, index)
-
-      if(index == 1) old_df <- new_df
-      else {
-        temp_df <- new_df
-        new_df <- except(new_df, old_df)
-        old_df <- temp_df
-      }
-
-      temp_df <- withColumn(new_df, "ROW", cast(isNull(new_df[[1]]), "integer") + index)
-      if(index == 1) unioned <- temp_df
-      else           unioned <- unionAll(unioned, temp_df)
-    }
-    rows <- unioned
+    rows <- bindIDs(rows)
+  
+    rows <- withColumn(rows, eval(rows_char), rows$"_1")
+    rows <- withColumn(rows, "ROW", cast(rows$"_2", "integer"))
+    rows <- select(rows, eval(rows_char), "ROW")
   }
 
   # Set unique number for COL grid
   if(!cols_is_null) {
     cols <- distinct(select(data, eval(cols_char)))
-    for(index in 1:nrow(collect(cols))) {
-      new_df <- limit(cols, index)
+    cols <- bindIDs(cols)
 
-      if(index == 1) old_df <- new_df
-      else {
-        temp_df <- new_df
-        new_df <- except(new_df, old_df)
-        old_df <- temp_df
-      }
-      temp_df <- withColumn(new_df, "COL", cast(isNull(new_df[[1]]), "integer") + index)
-      if(index == 1) unioned <- temp_df
-      else           unioned <- unionAll(unioned, temp_df)
-    }
-    cols <- unioned
+    cols <- withColumn(cols, eval(cols_char), cols$"_1")
+    cols <- withColumn(cols, "COL", cast(cols$"_2", "integer"))
+    cols <- select(cols, eval(cols_char), "COL")
   }
  
   # Create PANEL info dataset
   if(!rows_is_null && !cols_is_null) {
     rows_cols <- SparkR::join(rows, cols)
-    value_row <- collect(select(rows_cols, eval(rows_char)))[[1]]
-    value_col <- collect(select(rows_cols, eval(cols_char)))[[1]]
-    
-    for(index in 1:length(value_row)) {
-      temp_df <- filter(rows_cols, rows_cols[[eval(rows_char)]] == value_row[index] &
-                                   rows_cols[[eval(cols_char)]] == value_col[index])
-      temp_df <- withColumn(temp_df, "PANEL", cast(isNull(rows_cols[[1]]), "integer") + index)
-      
-      if(index > 1) panels <- unionAll(panels, temp_df)
-      else          panels <- temp_df
-    }
+    rows_value <- select(rows_cols, eval(rows_char))
+    cols_value <- select(rows_cols, eval(cols_char))
+
+    rows_value <- bindIDs(rows_value)
+    rows_value <- withColumn(rows_value, "row1", rows_value$"_1")
+    rows_value <- withColumn(rows_value, "id", cast(rows_value$"_2", "integer"))
+
+    cols_value <- bindIDs(cols_value)
+    cols_value <- withColumn(cols_value, "col1", cols_value$"_1")
+    cols_value <- withColumn(cols_value, "PANEL", cast(cols_value$"_2", "integer"))
+
+    rows_cols_join <- SparkR::join(rows_value, cols_value, rows_value$id == cols_value$PANEL, "inner")
+    rows_cols_panel <- select(rows_cols_join, "row1", "col1", "PANEL")
+
+    panels <- SparkR::join(rows_cols, rows_cols_panel, rows_cols[[eval(rows_char)]] == rows_cols_panel$row1 &
+                                                  rows_cols[[eval(cols_char)]] == rows_cols_panel$col1, "inner")
+
+    panels <- select(panels, eval(rows_char), eval(cols_char), "ROW", "COL", "PANEL")
   } else if(!rows_is_null) {
-    value_row <- collect(select(rows, eval(rows_char)))[[1]]
-    
-    for(index in 1:length(value_row)) {
-      temp_df <- filter(rows, rows[[eval(rows_char)]] == value_row[index])
-      temp_df <- withColumn(temp_df, "PANEL", cast(isNull(rows[[1]]), "integer") + index)
-      
-      if(index > 1) panels <- unionAll(panels, temp_df)
-      else          panels <- temp_df
-    }
+    panels <- withColumn(rows, "PANEL", rows$ROW)
     panels <- withColumn(panels, "COL", cast(isNull(panels$ROW), "integer") + 1)
   } else if(!cols_is_null) {
-    value_col <- collect(select(cols, eval(cols_char)))[[1]]
-    
-    for(index in 1:length(value_col)) {
-      temp_df <- filter(cols, cols[[eval(cols_char)]] == value_col[index])
-      temp_df <- withColumn(temp_df, "PANEL", cast(isNull(cols[[1]]), "integer") + index)
-      
-      if(index > 1) panels <- unionAll(panels, temp_df)
-      else          panels <- temp_df
-    }
+    panels <- withColumn(cols, "PANEL", cols$COL)
     panels <- withColumn(panels, "ROW", cast(isNull(panels$COL), "integer") + 1)
   }
+  panels <- SparkR::arrange(panels, panels$PANEL)
   
   panels
 }
@@ -155,7 +128,8 @@ layout_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = 
   panels <- cbind(layout, unrowname(base))
   panels <- panels[order(panels$PANEL), , drop = FALSE]
   rownames(panels) <- NULL
-  
+  print(panels)
+  stop("layout_wrap")
   panels
 }
   

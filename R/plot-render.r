@@ -206,7 +206,7 @@ print.ggplot <- function(x, newpage = is.null(vp), vp = NULL, ...) {
 print.ggplot.SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
   set_last_plot(x)
   if(newpage) grid.newpage()
-  
+ 
   data <- ggplot_build.SparkR(x)
 
   gtable <- ggplot_gtable(data)
