@@ -84,7 +84,6 @@ ggplot_build <- function(plot) {
 }
 
 ggplot_build.SparkR <- function(plot) {
-  total_time <- 0
   if(length(plot$layers)==0) stop("No layers in plot", call.=FALSE)
 
   plot <- plot_clone(plot)
@@ -95,86 +94,35 @@ ggplot_build.SparkR <- function(plot) {
   scales <- plot$scales
   
   panel <- new_panel()
-print("stage 1")
-  time <- system.time(panel <- train_layout(panel, plot$facet, layer_data, plot$data))
-  print(time)
-  total_time <- total_time + time[3]
-print("stage 2")
-  time <- system.time(data <- facet_map_layout(plot$facet, plot$data, panel$layout))
-  print(time)
-  total_time <- total_time + time[3]
+  panel <- train_layout(panel, plot$facet, layer_data, plot$data)
+  data <- facet_map_layout(plot$facet, plot$data, panel$layout)
 
-print("stage 3")
-  time <- system.time(data <- compute_aesthetics.SparkR(data, plot))
-  print(time)
-  total_time <- total_time + time[3]
+  data <- compute_aesthetics.SparkR(data, plot)
   
-print("stage 4")
-  time <- system.time(data <- add_group.SparkR(data))
-  print(time)
-  total_time <- total_time + time[3]
-print("stage 5")
-  time <- system.time(data <- scales_transform_df.SparkR(scales, data))
-  print(time)
-  total_time <- total_time + time[3]
+  data <- add_group.SparkR(data)
+  data <- scales_transform_df.SparkR(scales, data)
 
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
 
-print("stage 6")
-  time <- system.time(panel <- train_position.SparkR(panel, data, scale_x(), scale_y()))
-  print(time)
-  total_time <- total_time + time[3]
-print("stage 7")
-  time <- system.time(data <- map_position.SparkR(data))
-  print(time)
-  total_time <- total_time + time[3]
+  panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
+  data <- map_position.SparkR(data)
 
-print("stage 8")
-  time <- system.time(data <- calculate_stats.SparkR(data, layers))
-  print(time)
-  total_time <- total_time + time[3]
-print("stage 9")
-  time <- system.time(data <- map_statistic.SparkR(data, plot))
-  print(time)
-  total_time <- total_time + time[3]
+  data <- calculate_stats.SparkR(data, layers)
+  data <- map_statistic.SparkR(data, plot)
   
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
   
-print("stage 10")
-  time <- system.time(data <- reparameterise.SparkR(data, plot))
-  print(time)
-  total_time <- total_time + time[3]
-print("stage 11")
-  time <- system.time(data <- adjust_position.SparkR(data, layers))
-  print(time)
-  total_time <- total_time + time[3]
+  data <- reparameterise.SparkR(data, plot)
+  data <- adjust_position.SparkR(data, layers)
  
-print("stage 12") 
-  time <- system.time(panel <- train_position.SparkR(panel, data, scale_x(), scale_y()))
-  print(time)
-  total_time <- total_time + time[3]
-print("stage 13")
-  time <- system.time(data <- map_position.SparkR(data))
-  print(time)
-  total_time <- total_time + time[3]
+  panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
+  data <- map_position.SparkR(data)
 
-print("stage 14")
-  time <- system.time(data <- scales_transform_df.SparkR(scales, data))
-  print(time)
-  before_time <- total_time + time[3]
-  print("before collect")
-  print(total_time)
-print("stage 15")
-  time <- system.time(data <- collect(data))
-  print(time)
-  total_time <- before_time + time[3]
-print("stage 16")
-  time <- system.time(panel <- train_ranges.SparkR(panel, plot))
-  print(time)
-  total_time <- total_time + time[3]
+  data <- scales_transform_df.SparkR(scales, data)
 
-  print("real total")
-  print(total_time)
+  data <- collect(data)
+  panel <- train_ranges.SparkR(panel, plot)
+
   list(data = list(data), panel = panel, plot = plot)
 }
