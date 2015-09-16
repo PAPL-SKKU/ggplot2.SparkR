@@ -144,7 +144,7 @@ Layer <- proto(expr = {
     }
 
     scales_add_defaults(plot$scales, data, aesthetics, plot$plot_env)
-
+    
     # Evaluate aesthetics in the context of their data frame
     evaled <- compact(
       eval.quoted(aesthetics, data, plot$plot_env))
@@ -277,7 +277,6 @@ map_statistic.SparkR <- function(data, plot) {
   if(length(new) == 0) return(data)
 
   data <- withColumn(data, names(new), data[[as.character(new)]])
-
   data
 }
 
@@ -290,7 +289,7 @@ adjust_position.SparkR <- function(data, layers) {
       x_data <- count_data$x
       n <- count_data$count
       d_width <- collect(agg(groupBy(data, "x", "width"), d_width = max(data$xmax - data$xmin)))$d_width
-
+      
       for(index in 1:length(x_data)) {
         filter_df <- filter(data, data$x == x_data[index])
  
@@ -326,7 +325,8 @@ adjust_position.SparkR <- function(data, layers) {
       data <- unioned2
     },
     identity = {NULL},
-    stack = {}
+    stack = {
+    }
   )
   
   data
@@ -342,10 +342,10 @@ reparameterise.SparkR <- function(data, plot) {
                                    xmin = data$x - (data$width / 2), xmax = data$x + (data$width / 2))
 
       if(length(grep("fill", columns(data))) == 0)
-        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density",
+        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density", "width",
                              "PANEL", "group", "ymin", "ymax", "xmin", "xmax")
       else
-        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density", "fill",
+        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density", "fill", "width",
                              "PANEL", "group", "ymin", "ymax", "xmin", "xmax")
     },
     boxplot = {

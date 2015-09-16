@@ -117,7 +117,7 @@ scales_add_defaults <- function(scales, data, aesthetics, env) {
       # Skip aesthetics with no scales (e.g. group, order, etc)
       scale_f <- find_global(scale_name, env, mode = "function")
       if (is.null(scale_f)) next
-
+     
       scales$add(scale_f())
     }
   } else {

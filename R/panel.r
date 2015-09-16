@@ -111,17 +111,13 @@ train_position.SparkR <- function(panel, data, x_scale, y_scale) {
   # discrete : unique value of column
 
   if (!is.null(x_scale) && length(grep("x", columns(data))) != 0 && is.null(panel$x_scales[[1]]$range$range)) {
-    if(panel$x_scales[[1]]$scale_name == "position_c") {
-      panel$x_scales[[1]]$range$range <- select(data, min(data$x), max(data$x))
-    } else if(panel$x_scales[[1]]$scale_name == "position_d") {
+    if(panel$x_scales[[1]]$scale_name == "position_d") {
       panel$x_scales[[1]]$range$range <- distinct(select(data, data$x))
     }
   }
 
   if (!is.null(y_scale) && length(grep("y", columns(data))) != 0 && is.null(panel$y_scales[[1]]$range$range)) {
-    if(panel$y_scales[[1]]$scale_name == "position_c") {
-      panel$y_scales[[1]]$range$range <- select(data, min(data$y), max(data$y))
-    } else if(panel$y_scales[[1]]$scale_name == "position_d") {
+    if(panel$y_scales[[1]]$scale_name == "position_d") {
       panel$y_scales[[1]]$range$range <- distinct(select(data, data$y))
     }
   }
@@ -253,7 +249,7 @@ train_ranges <- function(panel, coord) {
   panel
 }
 
-train_ranges.SparkR <- function(panel, plot) {
+train_ranges.SparkR <- function(panel, data, plot) {
   panel$layout <- collect(panel$layout)
   x_scale_name <- panel$x_scales[[1]]$scale_name
   y_scale_name <- panel$y_scales[[1]]$scale_name
@@ -262,29 +258,39 @@ train_ranges.SparkR <- function(panel, plot) {
     panel$x_scales[[1]]$range$range <- collect(panel$x_scales[[1]]$range$range)[[1]]
     panel$y_scales[[1]]$range$range <- collect(panel$y_scales[[1]]$range$range)[[1]]
   } else if(x_scale_name == "position_d" && y_scale_name == "position_c") {
-    y_range1 <- select(panel$y_scales[[1]]$range$range, "MIN(y)")
-    y_range2 <- select(panel$y_scales[[1]]$range$range, "MAX(y)")
-    range <- unionAll(y_range1, y_range2)
-    range <- unionAll(range, panel$x_scales[[1]]$range$range)
-    range <- collect(range)
+    panel$x_scales[[1]]$range$range <- collect(panel$x_scales[[1]]$range$range)[[1]]
 
-    panel$x_scales[[1]]$range$range <- as.character(range[-c(1:2), ])
-    panel$y_scales[[1]]$range$range <- as.numeric(range[1:2, ])
+    if(!is.null(data[[1]]$ymin)) y_min <- min(data[[1]]$ymin)
+    else y_min <- if(min(data[[1]]$y) >= 1) 0 else min(data[[1]]$y)
+    
+    if(!is.null(data[[1]]$ymax)) y_max <- max(data[[1]]$ymax)
+    else y_max <- if(max(data[[1]]$y) >= 1) 0 else max(data[[1]]$y)
+    
+    panel$y_scales[[1]]$range$range <- c(y_min, y_max)
   } else if(x_scale_name == "position_c" && y_scale_name == "position_d") {
-    x_range1 <- select(panel$x_scales[[1]]$range$range, "MIN(x)")
-    x_range2 <- select(panel$x_scales[[1]]$range$range, "MAX(x)")
-    range <- unionAll(x_range1, x_range2)
-    range <- unionAll(range, panel$y_scales[[1]]$range$range)
-    range <- collect(range)
+    if(!is.null(data[[1]]$xmin)) x_min <- min(data[[1]]$xmin)
+    else x_min <- if(min(data[[1]]$x) >= 1) 0 else min(data[[1]]$x)
+    
+    if(!is.null(data[[1]]$xmax)) x_max <- max(data[[1]]$xmax)
+    else x_max <- if(max(data[[1]]$x) >= 1) 0 else max(data[[1]]$x)
 
-    panel$x_scales[[1]]$range$range <- as.numeric(range[1:2, ])
-    panel$y_scales[[1]]$range$range <- as.character(range[-c(1:2), ])
+    panel$x_scales[[1]]$range$range <- c(x_min, x_max)
+    panel$y_scales[[1]]$range$range <- collect(panel$y_scales[[1]]$range$range)[[1]]
   } else if(x_scale_name == "position_c" && y_scale_name == "position_c") {
-    range <- unionAll(panel$x_scales[[1]]$range$range, panel$y_scales[[1]]$range$range)
-    range <- collect(range)
+    if(!is.null(data[[1]]$xmin)) x_min <- min(data[[1]]$xmin)
+    else x_min <- if(min(data[[1]]$x) >= 1) 0 else min(data[[1]]$x)
+    
+    if(!is.null(data[[1]]$xmax)) x_max <- max(data[[1]]$xmax)
+    else x_max <- if(max(data[[1]]$x) >= 1) 0 else max(data[[1]]$x)
 
-    panel$x_scales[[1]]$range$range <- as.numeric(range[1, ])
-    panel$y_scales[[1]]$range$range <- as.numeric(range[2, ])
+    if(!is.null(data[[1]]$ymin)) y_min <- min(data[[1]]$ymin)
+    else y_min <- if(min(data[[1]]$y) >= 1) 0 else min(data[[1]]$y)
+    
+    if(!is.null(data[[1]]$ymax)) y_max <- max(data[[1]]$ymax)
+    else y_max <- if(max(data[[1]]$y) >= 1) 0 else max(data[[1]]$y)
+    
+    panel$x_scales[[1]]$range$range <- c(x_min, x_max)
+    panel$y_scales[[1]]$range$range <- c(y_min, y_max)
   }
 
   panel <- train_ranges(panel, plot$coordinates)
@@ -325,7 +331,6 @@ calculate_stats.SparkR <- function(data, layers) {
         range <- as.numeric(collect(select(data, min(data$x), max(data$x))))
         binwidth <- if(is.null(layers[[1]]$stat_params$binwidth)) diff(range) / 30
                     else layers[[1]]$stat_params$binwidth
-  
         breaks <- layers[[1]]$stat_params$breaks
         origin <- layers[[1]]$stat_params$origin
         right <- if(is.null(layers[[1]]$stat_params$right)) TRUE else layers[[1]]$stat_params$right
@@ -355,12 +360,15 @@ calculate_stats.SparkR <- function(data, layers) {
           filter_df <- SparkR::rename(filter_df, x_bin = filter_df$x)
           filter_df <- withColumn(filter_df, "x", 
                                   cast(isNull(filter_df$x_bin), "integer") + (left[index] + right[index]) / 2)
+  
+          if(index == 1) unioned <- filter_df
+          else unioned <- unionAll(unioned, filter_df)
         }
-      
+ 
         if(length(grep("fill", columns(data))))
-          data <- SparkR::count(groupBy(data, "PANEL", "group", "fill", "x"))
+          data <- SparkR::count(groupBy(unioned, "PANEL", "group", "fill", "x"))
         else
-          data <- SparkR::count(groupBy(data, "PANEL", "group", "x"))
+          data <- SparkR::count(groupBy(unioned, "PANEL", "group", "x"))
       }
       
       data <- SparkR::mutate(data, density = data$count / abs(data$count) / width,
@@ -370,7 +378,7 @@ calculate_stats.SparkR <- function(data, layers) {
       max_density <- select(data, max(abs(data$density)))
       max_density <- SparkR::rename(max_density, max_density = max_density[[1]])
       temp_df <- SparkR::join(data, max_density)
-      data <- withColumn(temp_df, "ndensity", temp_df$density / temp_df$max_density)
+      data <- SparkR::arrange(withColumn(temp_df, "ndensity", temp_df$density / temp_df$max_density), "x")
     },
     bin2d = {
       bins_null <- layers[[1]]$stat_params$bins
