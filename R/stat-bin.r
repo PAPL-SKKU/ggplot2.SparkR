@@ -136,6 +136,6 @@ bin <- function(x, weight=NULL, binwidth=NULL, origin=NULL, breaks=NULL, range=N
   })
   
   if (drop) res <- subset(res, count > 0)
-  
+ 
   res
 }

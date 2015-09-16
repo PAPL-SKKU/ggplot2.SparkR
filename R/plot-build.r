@@ -34,7 +34,7 @@ ggplot_build <- function(plot) {
   panel <- new_panel()
   panel <- train_layout(panel, plot$facet, layer_data, plot$data)
   data <- map_layout(panel, plot$facet, layer_data, plot$data)
-  
+
   # Compute aesthetics to produce data with generalised variable names
   data <- dlapply(function(d, p) p$compute_aesthetics(d, plot))
   data <- lapply(data, add_group)
@@ -62,7 +62,7 @@ ggplot_build <- function(plot) {
   data <- dlapply(function(d, p) p$reparameterise(d))
   # Apply position adjustments
   data <- dlapply(function(d, p) p$adjust_position(d))
-  
+
   # Reset position scales, then re-train and map.  This ensures that facets
   # have control over the range of a plot: is it generated from what's
   # displayed, or does it include the range of underlying data
@@ -94,6 +94,15 @@ ggplot_build.SparkR <- function(plot) {
   
   scales <- plot$scales
   
+  # Apply function to layer and matching data
+  dlapply <- function(f) {
+    out <- vector("list", length(data))
+    for(i in seq_along(data)) {
+      out[[i]] <- f(d = data[[i]], p = layers[[i]])
+    }
+    out
+  }
+
   panel <- new_panel()
 print("stage 1")
   time <- system.time(panel <- train_layout(panel, plot$facet, layer_data, plot$data))
@@ -145,10 +154,10 @@ print("stage 10")
   time <- system.time(data <- reparameterise.SparkR(data, plot))
   print(time)
   total_time <- total_time + time[3]
-print("stage 11")
-  time <- system.time(data <- adjust_position.SparkR(data, layers))
-  print(time)
-  total_time <- total_time + time[3]
+#print("stage 11")
+#  time <- system.time(data <- adjust_position.SparkR(data, layers))
+#  print(time)
+#  total_time <- total_time + time[3]
  
 print("stage 12") 
   time <- system.time(panel <- train_position.SparkR(panel, data, scale_x(), scale_y()))
@@ -165,16 +174,27 @@ print("stage 14")
   before_time <- total_time + time[3]
   print("before collect")
   print(total_time)
+
 print("stage 15")
-  time <- system.time(data <- collect(data))
+  time <- system.time(data <- list(collect(data)))
   print(time)
   total_time <- before_time + time[3]
-print("stage 16")
-  time <- system.time(panel <- train_ranges.SparkR(panel, plot))
+
+  npscales <- scales$non_position_scales()
+  if (npscales$n() > 0) {
+    lapply(data, scales_train_df, scales = npscales)
+    data <- lapply(data, scales_map_df, scales = npscales)
+  }
+  
+  # Apply position adjustments
+  data <- dlapply(function(d, p) p$adjust_position(d))
+  
+  print("stage 16")
+  time <- system.time(panel <- train_ranges.SparkR(panel, data, plot))
   print(time)
   total_time <- total_time + time[3]
 
   print("real total")
   print(total_time)
-  list(data = list(data), panel = panel, plot = plot)
+  list(data = data, panel = panel, plot = plot)
 }
