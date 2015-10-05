@@ -165,43 +165,34 @@ map_position <- function(panel, data, x_scale, y_scale) {
 
 map_position.SparkR <- function(data) {
   data_and_types <- dtypes(data)
+  column_list <- columns(data)
 
   for(pair in data_and_types) {
     if(pair[1] == "x" && pair[2] == "string") {
-      distinct <- SparkR::arrange(distinct(select(data, "x")), "x")
-      distinct <- SparkR::rename(distinct, x_new = distinct$x)
-      
-      distinct_id <- bindIDs(distinct)
-      distinct_id <- SparkR::rename(distinct_id, x_new = distinct_id$"_1")
-      distinct_id <- select(withColumn(distinct_id, "x", cast(distinct_id$"_2", "integer")), "x_new", "x")
-      
-      col_list <- as.list(columns(data))
-      data <- SparkR::rename(data, x_old = data$x)
-      data <- SparkR::join(data, distinct_id, data$x_old == distinct_id$x_new, "inner")
-      data <- select(data, col_list)  
+      data <- withColumnRenamed(data, "x", "x_old")
+      disc_x <- bindIDs(distinct(select(data, "x_old")))
+      disc_x <- withColumn(disc_x, "x", cast(disc_x$"_2", "integer"))
+      data <- SparkR::join(data, disc_x, data$x_old == disc_x$"_1", "inner")
+      data <- select(data, as.list(column_list))
     } else if(pair[1] == "x" && pair[2] == "int") {
       data <- SparkR::rename(data, x_map = data$x)
       data <- SparkR::withColumn(data, "x", cast(data$x_map, "double"))
+      data <- select(data, as.list(column_list))
     }
 
     if(pair[1] == "y" && pair[2] == "string") {
-      distinct <- SparkR::arrange(distinct(select(data, "y")), "y")
-      distinct <- SparkR::rename(distinct, y_new = distinct$y)
-
-      distinct_id <- bindIDs(distinct)
-      distinct_id <- SparkR::rename(distinct_id, y_new = distinct_id$"_1")
-      distinct_id <- select(withColumn(distinct_id, "y", cast(distinct_id$"_2", "integer")), "y_new", "y")
-      
-      col_list <- as.list(columns(data))
-      data <- SparkR::rename(data, y_old = data$y)
-      data <- SparkR::join(data, distinct_id, data$y_old == distinct_id$y_new, "inner")
-      data <- select(data, col_list)    
+      data <- withColumnRenamed(data, "y", "y_old")
+      disc_y <- bindIDs(distinct(select(data, "y_old")))
+      disc_y <- withColumn(disc_y, "y", cast(disc_y$"_2", "integer"))
+      data <- SparkR::join(data, disc_y, data$y_old == disc_y$"_1", "inner")
+      data <- select(data, as.list(column_list))
     } else if(pair[1] == "y" && pair[2] == "int") {
       data <- SparkR::rename(data, y_map = data$y)
       data <- SparkR::withColumn(data, "y", cast(data$y_map, "double"))
+      data <- select(data, as.list(column_list))
     }
   }
-  
+
   data
 }
 
@@ -517,11 +508,8 @@ calculate_stats.SparkR <- function(data, layers) {
       else
         data <- SparkR::count(groupBy(data, "PANEL", "x", "y"))
 
-      count_group <- SparkR::count(groupBy(data, "group"))
-
-      data <- SparkR::rename(data, n = data$count, group_old = data$group)
-      data <- SparkR::join(data, count_group, data$group_old == count_group$group, "inner")
-      data <- withColumn(data, "prop", data$count^(-1))
+      data <- SparkR::rename(data, n = data$count)
+      data <- withColumn(data, "prop", data$n^(-1))
       data <- select(data, "PANEL", "x", "y", "n", "prop")
     }
   )

@@ -117,7 +117,7 @@ ggplot_build.SparkR <- function(plot) {
 
   panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
   data <- map_position.SparkR(data)
-  add.group <- map_position.SparkR(add.group)
+#  add.group <- map_position.SparkR(add.group)
 
   data <- calculate_stats.SparkR(data, layers)
   data <- map_statistic.SparkR(data, plot)
@@ -129,9 +129,9 @@ ggplot_build.SparkR <- function(plot) {
 
   panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
   data <- map_position.SparkR(data)
-
+ 
   data <- add_group.SparkR(data, add.group)
-
+  data <- SparkR::arrange(data, "x", "y")
   data <- list(collect(data))
 
   npscales <- scales$non_position_scales()
