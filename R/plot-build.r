@@ -33,8 +33,7 @@ ggplot_build <- function(plot) {
   # variables, and add on a PANEL variable to data
   panel <- new_panel()
   panel <- train_layout(panel, plot$facet, layer_data, plot$data)
-  time <- system.time(data <- map_layout(panel, plot$facet, layer_data, plot$data))
-
+  data <- map_layout(panel, plot$facet, layer_data, plot$data)
 
   # Compute aesthetics to produce data with generalised variable names
   data <- dlapply(function(d, p) p$compute_aesthetics(d, plot))
@@ -42,7 +41,7 @@ ggplot_build <- function(plot) {
 
   # Transform all scales
   data <- lapply(data, scales_transform_df, scales = scales)
-  
+
   # Map and train positions so that statistics have access to ranges
   # and all positions are numeric
   scale_x <- function() scales$get_scales("x")
@@ -50,7 +49,7 @@ ggplot_build <- function(plot) {
 
   panel <- train_position(panel, data, scale_x(), scale_y())
   data <- map_position(panel, data, scale_x(), scale_y())
-  
+
   # Apply and map statistics
   data <- calculate_stats(panel, data, layers)
   data <- dlapply(function(d, p) p$map_statistic(d, plot))
@@ -58,9 +57,10 @@ ggplot_build <- function(plot) {
 
   # Make sure missing (but required) aesthetics are added
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
-  
+
   # Reparameterise geoms from (e.g.) y and width to ymin and ymax
   data <- dlapply(function(d, p) p$reparameterise(d))
+
   # Apply position adjustments
   data <- dlapply(function(d, p) p$adjust_position(d))
 
@@ -70,7 +70,7 @@ ggplot_build <- function(plot) {
   reset_scales(panel)
   panel <- train_position(panel, data, scale_x(), scale_y())
   data <- map_position(panel, data, scale_x(), scale_y())
-
+  
   # Train and map non-position scales
   npscales <- scales$non_position_scales()
   if (npscales$n() > 0) {
@@ -85,7 +85,6 @@ ggplot_build <- function(plot) {
 }
 
 ggplot_build.SparkR <- function(plot) {
-  total_time <- 0
   if(length(plot$layers)==0) stop("No layers in plot", call.=FALSE)
 
   plot <- plot_clone(plot)
@@ -106,100 +105,46 @@ ggplot_build.SparkR <- function(plot) {
 
   panel <- new_panel()
   panel <- train_layout(panel, plot$facet, layer_data, plot$data)
-  print("stage 1")
-  time <- system.time(data <- facet_map_layout(plot$facet, plot$data, panel$layout))
-  total_time <- total_time + time[3]
-  print(time)
+  data <- facet_map_layout(plot$facet, plot$data, panel$layout)
 
-  print("stage 2")
-  time <- system.time(data <- compute_aesthetics.SparkR(data, plot))
-  total_time <- total_time + time[3]
+  data <- compute_aesthetics.SparkR(data, plot)
+  add.group <- make_group.SparkR(data)
 
-  print(time)
-  
-  print("stage 3")
-  time <- system.time(data <- add_group.SparkR(data))
-  total_time <- total_time + time[3]
-
-  print(time)
-  print("stage 4")
-  time <- system.time(data <- scales_transform_df.SparkR(scales, data))
-  total_time <- total_time + time[3]
-
-  print(time)
+  data <- scales_transform_df.SparkR(scales, data)
 
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
 
   panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
-  print("stage 5")
-  time <- system.time(data <- map_position.SparkR(data))
-  total_time <- total_time + time[3]
+  data <- map_position.SparkR(data)
+  add.group <- map_position.SparkR(add.group)
 
-  print(time)
+  data <- calculate_stats.SparkR(data, layers)
+  data <- map_statistic.SparkR(data, plot)
 
-  print("stage 6")
-  time <- system.time(data <- calculate_stats.SparkR(data, layers))
-  total_time <- total_time + time[3]
-
-  print(time)
-  print("stage 7")
-  time <- system.time(data <- map_statistic.SparkR(data, plot))
-  total_time <- total_time + time[3]
-
-  print(time)
-  
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
  
-  print("stage 8")
-  time <- system.time(data <- scales_transform_df.SparkR(scales, data))
-  total_time <- total_time + time[3]
+  data <- scales_transform_df.SparkR(scales, data)
+  data <- reparameterise.SparkR(data, plot)
 
-  print(time)
-  print("stage 9")
-  time <- system.time(data <- reparameterise.SparkR(data, plot))
-  total_time <- total_time + time[3]
-
-  print(time)
-  
   panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
-  print("stage 10")
-  time <- system.time(data <- map_position.SparkR(data))
-  total_time <- total_time + time[3]
+  data <- map_position.SparkR(data)
 
-  print(time)
+  data <- add_group.SparkR(data, add.group)
 
-  print("stage 11")
-  time <- system.time(data <- list(collect(data)))
-  total_time <- total_time + time[3]
-
-  print(time)
+  data <- list(collect(data))
 
   npscales <- scales$non_position_scales()
   if (npscales$n() > 0) {
     lapply(data, scales_train_df, scales = npscales)
-    print("stage 12")
-    time <- system.time(data <- lapply(data, scales_map_df, scales = npscales))
-    total_time <- total_time + time[3]
-
-    print(time)
+    data <- lapply(data, scales_map_df, scales = npscales)
   }
   
   # Apply position adjustments
-  print("stage 13")
-  time <- system.time(data <- dlapply(function(d, p) p$adjust_position(d)))
-  total_time <- total_time + time[3]
+  data <- dlapply(function(d, p) p$adjust_position(d))
 
-  print(time)
-  
-  print("stage 14")
-  time <- system.time(panel <- train_ranges.SparkR(panel, data, plot))
-  total_time <- total_time + time[3]
-
-  print(time)
-  
-  print("total_time")
-  print(total_time)
+  panel <- train_ranges.SparkR(panel, data, plot)
 
   list(data = data, panel = panel, plot = plot)
 }
+

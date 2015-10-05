@@ -62,7 +62,7 @@ isDiscrete <- function(data) {
   column_arr
 }
 
-add_group.SparkR <- function(data) {
+make_group.SparkR <- function(data) {
   discrete_col <- append(isDiscrete(data), "PANEL")
   disc <- distinct(select(data, as.list(discrete_col)))
   complete_col <- "group"
@@ -72,33 +72,48 @@ add_group.SparkR <- function(data) {
     type_disc <- unlist(dtypes(temp_df))[2]
     temp_df <- bindIDs(temp_df)
 
-    temp_df <- withColumn(temp_df, paste0(eval(discrete_col[index]), "_OLD"), cast(temp_df$"_1", eval(type_disc)))
+    temp_df <- withColumn(temp_df, eval(discrete_col[index]), cast(temp_df$"_1", eval(type_disc)))
     temp_df <- withColumn(temp_df, "group_id", cast(temp_df$"_2", "integer"))
-    temp_df <- select(temp_df, paste0(eval(discrete_col[index]), "_OLD"), "group_id")
-    complete_col <- append(complete_col, paste0(discrete_col[index], "_OLD"))
+    temp_df <- select(temp_df, eval(discrete_col[index]), "group_id")
+    complete_col <- append(complete_col, discrete_col[index])
 
     if(index == 1) {
       joined <- temp_df
       joined <- withColumnRenamed(joined, "group_id", "group")
     }
     else {
-      joined <- SparkR::join(joined, temp_df, joined$group == temp_df$group_id)
+      joined <- SparkR::join(joined, temp_df, joined$group == temp_df$group_id, "inner")
     }
     joined <- select(joined, as.list(complete_col))
   }
 
-  joined_cmd <- 'SparkR::join(data, joined, data$PANEL == joined$PANEL_OLD'
-  
-  for(col in discrete_col[discrete_col != "PANEL"]) {
-    joined_cmd <- paste0(joined_cmd, ' & data$', col, ' == joined$', col, "_OLD", sep="")
+  joined
+}
+
+add_group.SparkR <- function(data, group) {
+  column_list <- as.list(append(columns(data), "group"))
+  group <- SparkR::rename(group, PANEL_OLD = group$PANEL)
+
+  if(length(grep("x", columns(group)))) {
+    group <- SparkR::rename(group, x_OLD = group$x)
+    if(length(grep("fill", columns(group)))) {
+      group <- SparkR::rename(group, fill_OLD = group$fill)
+      joined <- SparkR::join(data, group, data$x == group$x_OLD & data$PANEL == group$PANEL_OLD &
+                                          data$fill == group$fill_OLD, "inner")
+    } else {
+      joined <- SparkR::join(data, group, data$x == group$x_OLD & data$PANEL == group$PANEL_OLD, "inner") 
+    }
+  } else {
+    if(length(grep("fill", columns(group)))) {
+      group <- SparkR::rename(group, fill_OLD = group$fill)
+      joined <- SparkR::join(data, group, data$PANEL == group$PANEL_OLD & data$fill == group$fill_OLD, "inner")
+    } else {
+      joined <- SparkR::join(data, group, data$PANEL == group$PANEL_OLD, "inner")
+    }
   }
 
-  joined_cmd <- paste0(joined_cmd, ")")
-  columns_data <- columns(data)
-  joined <- eval(parse(text = joined_cmd))
-  
-  group <- select(joined, append(as.list(columns_data), "group"))
-  group
+  data <- select(joined, column_list)
+  data
 }
 
 order_groups <- function(data) {

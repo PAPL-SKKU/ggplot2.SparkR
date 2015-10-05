@@ -1,4 +1,4 @@
-# Panel object.
+
 #
 # A panel figures out how data is positioned within a panel of a plot,
 # coordinates information from scales, facets and coords.  Eventually all
@@ -168,7 +168,7 @@ map_position.SparkR <- function(data) {
 
   for(pair in data_and_types) {
     if(pair[1] == "x" && pair[2] == "string") {
-      distinct <- distinct(select(data, "x"))
+      distinct <- SparkR::arrange(distinct(select(data, "x")), "x")
       distinct <- SparkR::rename(distinct, x_new = distinct$x)
       
       distinct_id <- bindIDs(distinct)
@@ -185,7 +185,7 @@ map_position.SparkR <- function(data) {
     }
 
     if(pair[1] == "y" && pair[2] == "string") {
-      distinct <- distinct(select(data, "y"))
+      distinct <- SparkR::arrange(distinct(select(data, "y")), "y")
       distinct <- SparkR::rename(distinct, y_new = distinct$y)
 
       distinct_id <- bindIDs(distinct)
@@ -323,9 +323,9 @@ calculate_stats.SparkR <- function(data, layers) {
  
       if(dtypes(x_test)[[1]][2] == "int") {
         if(length(grep("fill", columns(data))))
-          data <- SparkR::count(groupBy(data, "x", "PANEL", "group", "fill"))
+          data <- SparkR::count(groupBy(data, "x", "PANEL", "fill"))
         else
-          data <- SparkR::count(groupBy(data, "x", "PANEL", "group"))
+          data <- SparkR::count(groupBy(data, "x", "PANEL"))
      
       } else if(dtypes(x_test)[[1]][2] == "double") {
         range <- as.numeric(collect(select(data, min(data$x), max(data$x))))
@@ -366,9 +366,9 @@ calculate_stats.SparkR <- function(data, layers) {
         }
  
         if(length(grep("fill", columns(data))))
-          data <- SparkR::count(groupBy(unioned, "PANEL", "group", "fill", "x"))
+          data <- SparkR::count(groupBy(unioned, "PANEL", "fill", "x"))
         else
-          data <- SparkR::count(groupBy(unioned, "PANEL", "group", "x"))
+          data <- SparkR::count(groupBy(unioned, "PANEL", "x"))
       }
       
       data <- SparkR::mutate(data, density = data$count / abs(data$count) / width,
@@ -391,31 +391,86 @@ calculate_stats.SparkR <- function(data, layers) {
         x = seq(origin[1], range[[2]] + binwidth[[1]], binwidth[[1]]),
         y = seq(origin[2], range[[4]] + binwidth[[2]], binwidth[[2]])
       )
-      
-      for(xy in 1:length(breaks)) {
-        col <- names(breaks)[xy] 
-        for(index in 1:(length(breaks[[xy]])-1)) {
-          lower <- breaks[[xy]][index]
-          upper <- breaks[[xy]][index + 1]
-         
-          if(index > 1) filter_df <- filter(data, data[[eval(col)]] > lower & data[[eval(col)]] <= upper)
-          else          filter_df <- filter(data, data[[eval(col)]] >= lower & data[[eval(col)]] <= upper)
+ 
+      for(index in 1:(length(breaks$y)-1)) {
+        lower <- breaks$y[index]
+        upper <- breaks$y[index + 1]
+          
+        if(index > 1) y_df <- filter(data, data$y > lower & data$y <= upper)
+        else          y_df <- filter(data, data$y >= lower & data$y <= upper)
 
-          filter_col <- cast(isNull(filter_df[[eval(col)]]), "integer")
-          temp_df <- SparkR::mutate(filter_df, xy_min = filter_col + lower, xy_max = filter_col + upper )
+        y_df <- SparkR::mutate(y_df, ymin = cast(isNull(y_df$y), "integer") + lower,
+                                     ymax = cast(isNull(y_df$y), "integer") + upper )
+ 
+        if(index > 1) {unioned_y <- unionAll(unioned_y, y_df)}
+        else          {unioned_y <- y_df}
+      } 
 
-          if(index > 1) unioned <- unionAll(unioned, temp_df)
-          else          unioned <- temp_df
-        }
+      for(index in 1:(length(breaks$x)-1)) {
+        lower <- breaks$x[index]
+        upper <- breaks$x[index + 1]
+          
+        if(index > 1) x_df <- filter(data, data$x > lower & data$x <= upper)
+        else          x_df <- filter(data, data$x >= lower & data$x <= upper)
+
+        x_df <- SparkR::mutate(x_df, xmin = cast(isNull(x_df$x), "integer") + lower,
+                                     xmax = cast(isNull(x_df$x), "integer") + upper )
+ 
+        if(index > 1) {unioned_x <- unionAll(unioned_x, x_df)}
+        else          {unioned_x <- x_df}
+      }        
+
+      joined_list <- columns(data)
+      joined_list <- joined_list[joined_list != "x_map"]
+
+      complete_list <- "ID"
+      for(name in joined_list) {
+        joined_df <- select(data, name)
+        types <- dtypes(joined_df)[[1]][2]
         
-        if(xy == 1) data <- SparkR::rename(unioned, xmin = unioned$xy_min, xmax = unioned$xy_max)
-        else        data <- SparkR::rename(unioned, ymin = unioned$xy_min, ymax = unioned$xy_max)
+        joined_df <- bindIDs(joined_df)
+        joined_df <- withColumn(joined_df, name, cast(joined_df$"_1", types))
+        complete_list <- append(name, complete_list)
+
+        if(name != joined_list[1]) {
+          joined <- SparkR::join(joined, joined_df, joined$ID == joined_df$"_2", "inner")
+        }
+        else {
+          joined <- withColumnRenamed(joined_df, "_2", "ID")
+        }
+#        joined <- select(joined, as.list(complete_list)) 
       }
 
+      xmin <- bindIDs(select(unioned_x, "xmin"))
+      xmin <- withColumn(xmin, "xmin", cast(xmin$"_1", "double"))
+      complete_list <- append(complete_list, "xmin")
+      joined <- SparkR::join(joined, xmin, joined$ID == xmin$"_2", "inner")
+#      joined <- select(joined, as.list(complete_list)) 
+      
+      xmax <- bindIDs(select(unioned_x, "xmax"))
+      xmax <- withColumn(xmax, "xmax", cast(xmax$"_1", "double"))
+      complete_list <- append(complete_list, "xmax")
+      joined <- SparkR::join(joined, xmax, joined$ID == xmax$"_2", "inner")
+#      joined <- select(joined, as.list(complete_list)) 
+      
+      ymin <- bindIDs(select(unioned_y, "ymin"))
+      ymin <- withColumn(ymin, "ymin", cast(ymin$"_1", "double"))
+      complete_list <- append(complete_list, "ymin")
+      joined <- SparkR::join(joined, ymin, joined$ID == ymin$"_2", "inner")
+#      joined <- select(joined, as.list(complete_list)) 
+
+      ymax <- bindIDs(select(unioned_y, "ymax"))
+      ymax <- withColumn(ymax, "ymax", cast(ymax$"_1", "double"))
+      complete_list <- append(complete_list, "ymax")
+      joined <- SparkR::join(joined, ymax, joined$ID == ymax$"_2", "inner")
+
+      data <- select(joined, as.list(complete_list[complete_list != "ID"])) 
+      
       if(length(grep("fill", columns(data))))
-        data <- SparkR::count(groupBy(data, "PANEL", "group", "fill", "xmin", "xmax", "ymin", "ymax"))
-      else
-        data <- SparkR::count(groupBy(data, "PANEL", "group", "xmin", "xmax", "ymin", "ymax"))
+        data <- SparkR::count(groupBy(data, "PANEL", "fill", "xmin", "xmax", "ymin", "ymax"))
+      else {
+        data <- SparkR::count(groupBy(data, "PANEL", "xmin", "xmax", "ymin", "ymax"))
+      }
 
       sum_count <- select(data, sum(data$count))
       sum_count <- SparkR::rename(sum_count, sum_count = sum_count[[1]])
@@ -433,14 +488,14 @@ calculate_stats.SparkR <- function(data, layers) {
       weight <- if(is.null(weight_null)) 1 else weight_null
 
       if(length(grep("fill", columns(data))))
-        stats <- agg(groupBy(data, "x", "fill", "PANEL", "group"), ymin = min(data$y),
+        stats <- agg(groupBy(data, "x", "fill", "PANEL") , ymin = min(data$y),
                      lower = min(data$y)+(max(data$y)-min(data$y))*qs[2],
                      middle = min(data$y)+(max(data$y)-min(data$y))*qs[3],
                      upper = min(data$y)+(max(data$y)-min(data$y))*qs[4],
                      ymax = max(data$y), iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
                      relvarwidth = sqrt(sum(cast(isNotNull(data$y), "integer"))))
       else
-        stats <- agg(groupBy(data, "x", "PANEL", "group"), ymin = min(data$y),
+        stats <- agg(groupBy(data, "x", "PANEL"), ymin = min(data$y),
                      lower = min(data$y)+(max(data$y)-min(data$y))*qs[2],
                      middle = min(data$y)+(max(data$y)-min(data$y))*qs[3],
                      upper = min(data$y)+(max(data$y)-min(data$y))*qs[4],
@@ -458,16 +513,16 @@ calculate_stats.SparkR <- function(data, layers) {
     },
     sum = {
       if(length(grep("fill", columns(data))))
-        data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "fill", "group"))
+        data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "fill"))
       else
-        data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "group"))
+        data <- SparkR::count(groupBy(data, "PANEL", "x", "y"))
 
       count_group <- SparkR::count(groupBy(data, "group"))
 
       data <- SparkR::rename(data, n = data$count, group_old = data$group)
       data <- SparkR::join(data, count_group, data$group_old == count_group$group, "inner")
       data <- withColumn(data, "prop", data$count^(-1))
-      data <- select(data, "PANEL", "x", "y", "group", "n", "prop")
+      data <- select(data, "PANEL", "x", "y", "n", "prop")
     }
   )
 
