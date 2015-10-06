@@ -131,7 +131,6 @@ ggplot_build.SparkR <- function(plot) {
   data <- map_position.SparkR(data)
  
   data <- add_group.SparkR(data, add.group)
-  data <- SparkR::arrange(data, "x", "y")
   data <- list(collect(data))
 
   npscales <- scales$non_position_scales()
