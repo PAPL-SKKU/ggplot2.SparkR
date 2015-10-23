@@ -379,11 +379,14 @@ calculate_stats.SparkR <- function(data, layers) {
       range <- collect(select(data, min(data$x), max(data$x), min(data$y), max(data$y)))
      
       origin <- c(NA, NA)
+      x_types_int <- FALSE
+      y_types_int <- FALSE
  
       types <- dtypes(select(data, "x"))
       if(types[[1]][2] == "int" || types[[1]][2] == "integer") {
         binwidth[1] <- 1
         origin[1] <- -0.5
+        x_types_int <- TRUE
       }
       else {
         binwidth[1] <- collect(select(data, (max(data$x) - min(data$x)) / bins))[[1]]
@@ -394,6 +397,7 @@ calculate_stats.SparkR <- function(data, layers) {
       if(types[[1]][2] == "int" || types[[1]][2] == "integer") {
         binwidth[2] <- 1 
         origin[2] <- -0.5
+        y_types_int <- TRUE
       }
       else {
         binwidth[2] <- collect(select(data, (max(data$y) - min(data$y)) / bins))[[1]]
@@ -405,28 +409,46 @@ calculate_stats.SparkR <- function(data, layers) {
         y = seq(origin[2], range[[4]] + binwidth[[2]], binwidth[[2]])
       )
  
-      for(index in 1:(length(breaks$y)-1)) {
-        lower <- breaks$y[index]
-        upper <- breaks$y[index + 1]
+      if(x_types_int == TRUE & y_types_int == TRUE) {
+        data <- SparkR::mutate(data, xmin = data$x - 0.5, xmax = data$x + 0.5,
+                                     ymin = data$y - 0.5, ymax = data$y + 0.5)
+
+      } else if(x_types_int == TRUE) {
+        for(index in 1:(length(breaks$y)-1)) {
+          lower <- breaks$y[index]
+          upper <- breaks$y[index + 1]
           
-        if(index > 1) y_df <- filter(data, data$y > lower & data$y <= upper)
-        else          y_df <- filter(data, data$y >= lower & data$y <= upper)
+          if(index > 1) y_df <- filter(data, data$y > lower & data$y <= upper)
+          else          y_df <- filter(data, data$y >= lower & data$y <= upper)
 
-        y_df <- SparkR::mutate(y_df, ymin = cast(isNull(y_df$y), "integer") + lower,
-                                     ymax = cast(isNull(y_df$y), "integer") + upper )
+          y_df <- SparkR::mutate(y_df, ymin = cast(isNull(y_df$y), "integer") + lower,
+                                       ymax = cast(isNull(y_df$y), "integer") + upper )
  
-        if(index > 1) {unioned_y <- unionAll(unioned_y, y_df)}
-        else          {unioned_y <- y_df}
-      } 
+          if(index > 1) {unioned <- unionAll(unioned, y_df)}
+          else          {unioned <- y_df}
+        } 
 
-      if(length(grep("fill", columns(data))))
-        data <- SparkR::count(groupBy(unioned_y, "PANEL", "fill", "x", "ymin", "ymax"))
-      else {
-        data <- SparkR::count(groupBy(unioned_y, "PANEL", "x", "ymin", "ymax"))
+        data <- SparkR::mutate(unioned, xmin = unioned$x - 0.5, xmax = unioned$x + 0.5)
+
+      } else if(y_types_int == TRUE) {
+        for(index in 1:(length(breaks$x)-1)) {
+          lower <- breaks$x[index]
+          upper <- breaks$x[index + 1]
+          
+          if(index > 1) x_df <- filter(data, data$x > lower & data$x <= upper)
+          else          x_df <- filter(data, data$x >= lower & data$x <= upper)
+
+          x_df <- SparkR::mutate(x_df, xmin = cast(isNull(x_df$x), "integer") + lower,
+                                       xmax = cast(isNull(x_df$x), "integer") + upper )
+ 
+          if(index > 1) {unioned <- unionAll(unioned, x_df)}
+          else          {unioned <- x_df}
+        } 
+
+        data <- SparkR::mutate(unioned, ymin = unioned$y - 0.5, ymax = unioned$y + 0.5)
       }
-
-      data <- SparkR::mutate(data, xmin = data$x - 0.5, xmax = data$x + 0.5)
-      
+       
+      data <- SparkR::count(groupBy(data, "PANEL", "xmin", "xmax", "ymin", "ymax"))
       sum_count <- select(data, sum(data$count))
       sum_count <- SparkR::rename(sum_count, sum_count = sum_count[[1]])
       temp_df <- SparkR::join(data, sum_count)
