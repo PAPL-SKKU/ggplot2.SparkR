@@ -130,8 +130,13 @@ ggplot_build.SparkR <- function(plot) {
   panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
   data <- map_position.SparkR(data)
  
-  data <- add_group.SparkR(data, add.group)
+  data <- add_group.SparkR(data, add.group, plot)
   data <- list(collect(data))
+
+  if(plot$layers[[1]]$geom$objname == "bin2d") {
+    group <- data.frame(group = 1:nrow(data[[1]]))
+    data[[1]] <- cbind(data[[1]], group)
+  }
 
   npscales <- scales$non_position_scales()
   if (npscales$n() > 0) {

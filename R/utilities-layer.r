@@ -94,28 +94,34 @@ make_group.SparkR <- function(data) {
   joined
 }
 
-add_group.SparkR <- function(data, group) {
-  column_list <- as.list(append(columns(data), "group"))
-  group <- SparkR::rename(group, PANEL_OLD = group$PANEL)
-  joined_cmd <- "data$PANEL == group$PANEL_OLD"
+add_group.SparkR <- function(data, group, plot) {
+  if(plot$layers[[1]]$geom$objname != "bin2d") {
+    column_list <- as.list(append(columns(data), "group"))
+    group <- SparkR::rename(group, PANEL_OLD = group$PANEL)
+    joined_cmd <- "data$PANEL == group$PANEL_OLD"
 
-  if(length(grep("x", columns(group)))) {
-    group <- SparkR::rename(group, x_OLD = group$x)
-    joined_cmd <- paste0(joined_cmd, " & data$x == group$x_OLD")
-  }
+    if(length(grep("x", columns(group)))) {
+      group <- SparkR::rename(group, x_OLD = group$x)
+      joined_cmd <- paste0(joined_cmd, " & data$x == group$x_OLD")
+    }
 
-  if(length(grep("y", columns(group)))) {
-    group <- SparkR::rename(group, y_OLD = group$y)
-    joined_cmd <- paste0(joined_cmd, " & data$y == group$y_OLD")
-  }
+    if(length(grep("y", columns(group)))) {
+      group <- SparkR::rename(group, y_OLD = group$y)
+      joined_cmd <- paste0(joined_cmd, " & data$y == group$y_OLD")
+    }
 
-  if(length(grep("fill", columns(group)))) {
-    group <- SparkR::rename(group, fill_OLD = group$fill)
-    joined_cmd <- paste0(joined_cmd, " & data$fill == group$fill_OLD")
-  }
+    if(length(grep("fill", columns(group)))) {
+      group <- SparkR::rename(group, fill_OLD = group$fill)
+      joined_cmd <- paste0(joined_cmd, " & data$fill == group$fill_OLD")
+    }
 
-  joined <- SparkR::join(data, group, eval(parse(text = joined_cmd)), "inner")
-  data <- select(joined, column_list)
+    joined <- SparkR::join(data, group, eval(parse(text = joined_cmd)), "inner")
+    data <- select(joined, column_list)
+ 
+    if(length(grep("fill", columns(group)))) {
+      data <- SparkR::arrange(data, "x", "fill")
+    }
+  } 
   
   data
 }

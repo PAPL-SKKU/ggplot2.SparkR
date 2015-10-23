@@ -44,7 +44,6 @@ StatBin2d <- proto(Stat, {
   default_geom <- function(.) GeomRect
 
   calculate <- function(., data, scales, binwidth = NULL, bins = 30, breaks = NULL, origin = NULL, drop = TRUE, ...) {
-
     range <- list(
       x = scale_dimension(scales$x, c(0, 0)),
       y = scale_dimension(scales$y, c(0, 0))
@@ -57,6 +56,7 @@ StatBin2d <- proto(Stat, {
       stopifnot(is.numeric(origin))
       stopifnot(length(origin) == 2)
     }
+
     originf <- function(x) if (is.integer(x)) -0.5 else min(x, na.rm = TRUE)
     if (is.na(origin[1])) origin[1] <- originf(data$x)
     if (is.na(origin[2])) origin[2] <- originf(data$y)
@@ -91,7 +91,7 @@ StatBin2d <- proto(Stat, {
       stopifnot(all(sapply(breaks, is.numeric)))
     }
     names(breaks) <- c("x", "y")
-    
+
     xbin <- cut(data$x, sort(breaks$x), include.lowest = TRUE)
     ybin <- cut(data$y, sort(breaks$y), include.lowest = TRUE)
 
