@@ -408,6 +408,12 @@ calculate_stats.SparkR <- function(data, layers) {
         x = seq(origin[1], range[[2]] + binwidth[[1]], binwidth[[1]]),
         y = seq(origin[2], range[[4]] + binwidth[[2]], binwidth[[2]])
       )
+
+      x_test <- select(data, "x")
+      x_test <- withColumnRenamed(x_test, "x", "x_OLD")
+
+      y_test <- select(data, "y")
+      y_test <- withColumnRenamed(y_test, "y", "y_OLD")
  
       if(x_types_int == TRUE & y_types_int == TRUE) {
         data <- SparkR::mutate(data, xmin = data$x - 0.5, xmax = data$x + 0.5,
@@ -418,36 +424,76 @@ calculate_stats.SparkR <- function(data, layers) {
           lower <- breaks$y[index]
           upper <- breaks$y[index + 1]
           
-          if(index > 1) y_df <- filter(data, data$y > lower & data$y <= upper)
-          else          y_df <- filter(data, data$y >= lower & data$y <= upper)
+          if(index > 1) y_df <- filter(y_test, y_test$y_OLD > lower & y_test$y_OLD <= upper)
+          else          y_df <- filter(y_test, y_test$y_OLD >= lower & y_test$y_OLD <= upper)
 
-          y_df <- SparkR::mutate(y_df, ymin = cast(isNull(y_df$y), "integer") + lower,
-                                       ymax = cast(isNull(y_df$y), "integer") + upper )
+          y_df <- SparkR::mutate(y_df, ymin = cast(isNull(y_df$y_OLD), "integer") + lower,
+                                       ymax = cast(isNull(y_df$y_OLD), "integer") + upper)
  
           if(index > 1) {unioned <- unionAll(unioned, y_df)}
           else          {unioned <- y_df}
         } 
 
-        data <- SparkR::mutate(unioned, xmin = unioned$x - 0.5, xmax = unioned$x + 0.5)
+        unioned <- distinct(unioned)
+        data <- SparkR::join(data, unioned, data$y == unioned$y_OLD, "inner")
+        data <- SparkR::mutate(data, xmin = data$x - 0.5, xmax = data$x + 0.5)
 
       } else if(y_types_int == TRUE) {
         for(index in 1:(length(breaks$x)-1)) {
           lower <- breaks$x[index]
           upper <- breaks$x[index + 1]
           
-          if(index > 1) x_df <- filter(data, data$x > lower & data$x <= upper)
-          else          x_df <- filter(data, data$x >= lower & data$x <= upper)
+          if(index > 1) x_df <- filter(x_test, x_test$x_OLD > lower & x_test$x_OLD <= upper)
+          else          x_df <- filter(x_test, x_test$x_OLD >= lower & x_test$x_OLD <= upper)
 
-          x_df <- SparkR::mutate(x_df, xmin = cast(isNull(x_df$x), "integer") + lower,
-                                       xmax = cast(isNull(x_df$x), "integer") + upper )
+          x_df <- SparkR::mutate(x_df, xmin = cast(isNull(x_df$x_OLD), "integer") + lower,
+                                       xmax = cast(isNull(x_df$x_OLD), "integer") + upper )
  
           if(index > 1) {unioned <- unionAll(unioned, x_df)}
           else          {unioned <- x_df}
         } 
 
-        data <- SparkR::mutate(unioned, ymin = unioned$y - 0.5, ymax = unioned$y + 0.5)
+        unioned <- distinct(unioned)
+        data <- SparkR::join(data, unioned, data$x == unioned$x_OLD, "inner")
+        data <- SparkR::mutate(data, ymin = data$y - 0.5, ymax = data$y + 0.5)
+
+      } else {
+        for(index in 1:(length(breaks$x)-1)) {
+          lower <- breaks$x[index]
+          upper <- breaks$x[index + 1]
+          
+          if(index > 1) x_df <- filter(x_test, x_test$x_OLD > lower & x_test$x_OLD <= upper)
+          else          x_df <- filter(x_test, x_test$x_OLD >= lower & x_test$x_OLD <= upper)
+
+          x_df <- SparkR::mutate(x_df, xmin = cast(isNull(x_df$x_OLD), "integer") + lower,
+                                       xmax = cast(isNull(x_df$x_OLD), "integer") + upper )
+ 
+          if(index > 1) {unioned_x <- unionAll(unioned_x, x_df)}
+          else          {unioned_x <- x_df}
+        } 
+
+        for(index in 1:(length(breaks$y)-1)) {
+          lower <- breaks$y[index]
+          upper <- breaks$y[index + 1]
+          
+          if(index > 1) y_df <- filter(y_test, y_test$y_OLD > lower & y_test$y_OLD <= upper)
+          else          y_df <- filter(y_test, y_test$y_OLD >= lower & y_test$y_OLD <= upper)
+
+          y_df <- SparkR::mutate(y_df, ymin = cast(isNull(y_df$y_OLD), "integer") + lower,
+                                       ymax = cast(isNull(y_df$y_OLD), "integer") + upper )
+ 
+          if(index > 1) {unioned_y <- unionAll(unioned_y, y_df)}
+          else          {unioned_y <- y_df}
+        } 
+
+        unioned_x <- distinct(unioned_x)
+        unioned_y <- distinct(unioned_y)
+
+        data <- SparkR::join(data, unioned_x, data$x == unioned_x$x_OLD, "inner")
+        data <- SparkR::join(data, unioned_y, data$y == unioned_y$y_OLD, "inner")
       }
        
+      data <- select(data, "x", "y", "PANEL", "xmin", "xmax", "ymin", "ymax")
       data <- SparkR::count(groupBy(data, "PANEL", "xmin", "xmax", "ymin", "ymax"))
       sum_count <- select(data, sum(data$count))
       sum_count <- SparkR::rename(sum_count, sum_count = sum_count[[1]])
