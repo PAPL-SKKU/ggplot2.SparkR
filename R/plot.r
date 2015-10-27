@@ -114,17 +114,17 @@ ggplot.data.frame <- function(data, mapping=aes(), ..., environment = parent.fra
 
 #' Create a new ggplot plot from a Spark DataFrame
 #'
-#' @param df default DataFrame for plot
+#' @param data default DataFrame for plot
 #' @param mapping default list of aesthetic mappins (these can be colour,
 #'   size, shape, line type -- see individual geom functions for more details)
 #' @param ... ignored
 #' @param environment in which evaluation of aesthetics should occur
 #' @method ggplot DataFrame
 #' @export
-ggplot.DataFrame <- function(df, mapping=aes(), ..., environment = parent.frame()) {
+ggplot.DataFrame <- function(data, mapping=aes(), ..., environment = parent.frame()) {
   if (!missing(mapping) && !inherits(mapping, "uneval")) stop("Mapping should be created with aes or aes_string")
   p <- structure(list(
-    data = df,
+    data = data,
     layers = list(),
     scales = Scales$new(),
     mapping = mapping,
