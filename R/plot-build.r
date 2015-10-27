@@ -136,10 +136,10 @@ ggplot_build.SparkR <- function(plot) {
   data <- map_position.SparkR(data)
  
   data <- add_group.SparkR(data, add.group, plot)
-  data <- SparkR::arrange(data, "x")
   data <- list(collect(data))
 
   if(!is.null(outliers)) {
+    data[[1]] <- plyr::arrange(data[[1]], x)
     outliers <- plyr::arrange(outliers, x)
     data[[1]] <- cbind(data[[1]], outliers = outliers$outliers)
   }
