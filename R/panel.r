@@ -504,69 +504,76 @@ calculate_stats.SparkR <- function(data, layers) {
       qs <- c(0, 0.25, 0.5, 0.75, 1)
       coef_null <- layers[[1]]$stat_params$coef
       width_null <- layers[[1]]$stat_params$width
-      weight_null <- layers[[1]]$geom_params$weight
 
       coef <- if(is.null(coef_null)) 1.5 else coef_null
       width <- if(is.null(width_null)) 0.75 else width_null
-      weight <- if(is.null(weight_null)) 1 else weight_null
 
-      if(length(grep("fill", columns(data)))) {
+      column_fill <- length(grep("fill", columns(data)))
+
+      if(column_fill) {
         distinct_data <- collect(distinct(select(data, "x", "PANEL", "fill")))
-        test <- data.frame()
-
-        for(i in 1:nrow(distinct_data)) {
-          yy <- SparkR::filter(data, data$x == distinct_data$x[i] &
-                                     data$PANEL == distinct_data$PANEL[i] &
-                                     data$fill == distinct_data$fill[i])
-          yy <- collect(SparkR::arrange(select(yy, "y"), "y"))
-          quantile <- data.frame(ymin = min(yy$y),
-                                 lower = yy$y[ceiling(nrow(yy) * qs[2])],
-                                 middle = yy$y[ceiling(nrow(yy) * qs[3])],
-                                 upper = yy$y[ceiling(nrow(yy) * qs[4])],
-                                 ymax = max(yy$y),
-                                 iqr = (max(yy$y) - min(yy$y)) * (qs[4] - qs[2]),
-                                 relvarwidth = sqrt(nrow(yy)))
-
-          distinct <- cbind(distinct_data[i, ], quantile)
-
-          if(i > 1) test <- rbind(test, distinct)
-          else test <- distinct
-        }
       } else {
         distinct_data <- collect(distinct(select(data, "x", "PANEL")))
-        test <- data.frame()
-       
-        for(i in 1:nrow(distinct_data)) {
-          yy <- SparkR::filter(data, data$x == distinct_data$x[i] & 
-                                     data$PANEL == distinct_data$PANEL[i])
-          yy <- collect(SparkR::arrange(select(yy, "y"), "y"))
-          quantile <- data.frame(ymin = min(yy$y),
-                                 lower = yy$y[ceiling(nrow(yy) * qs[2])],
-                                 middle = yy$y[ceiling(nrow(yy) * qs[3])],
-                                 upper = yy$y[ceiling(nrow(yy) * qs[4])],
-                                 ymax = max(yy$y),
-                                 iqr = (max(yy$y) - min(yy$y)) * (qs[4] - qs[2]),
-                                 relvarwidth = sqrt(nrow(yy)))
-        
-          distinct <- cbind(distinct_data[i, ], quantile)
-
-          if(i > 1) test <- rbind(test, distinct)
-          else test <- distinct
-        }
       }
+     
+      for(i in 1:nrow(distinct_data)) {
+        if(column_fill) {
+          y <- SparkR::filter(data, data$x == distinct_data$x[i] &
+                                    data$PANEL == distinct_data$PANEL[i] &
+                                    data$fill == distinct_data$fill[i])
+        } else {
+          y <- SparkR::filter(data, data$x == distinct_data$x[i] & 
+                                    data$PANEL == distinct_data$PANEL[i])
+        }
+
+        y <- collect(SparkR::arrange(select(y, "y"), "y"))$y
+
+#        if(length(unique(weight)) != 1) {
+#          try_require("quantreg")
+#          stats <- as.numeric(coef(rq(y ~ 1, weights = weight, tau = qs)))
+#        } else {
+          stats <- as.numeric(quantile(y, qs))
+#        }
+
+        names(stats) <- c("ymin", "lower", "middle", "upper", "ymax")
+        iqr <- diff(stats[c(2, 4)])
+        outliers <- y < (stats[2] - coef * iqr) | y > (stats[4] + coef * iqr)
+
+        if(any(outliers)) {
+          stats[c(1, 5)] <- range(c(stats[2:4], y[!outliers]), na.rm = TRUE)
+        }
+
+        df <- as.data.frame(as.list(stats))
+        
+        df$outliers <- I(list(y[outliers]))
       
+#        if(is.null(weight)) {
+          n <- sum(!is.na(y))
+#        } else {
+#          n <- sum(weight[!is.na(y) & !is.na(weight)])
+#        }
+
+        df$notchupper <- df$middle + 1.58 * iqr / sqrt(n)
+        df$notchlower <- df$middle - 1.58 * iqr / sqrt(n)
+        df$relvarwidth <- sqrt(n)
+
+        distinct <- cbind(distinct_data[i, ], df)
+
+        if(i > 1) test <- rbind(test, distinct)
+        else test <- distinct
+      }
+
+      outliers <- test[c("x", "outliers")]
+      test$outliers <- NULL
+
       sqlContext <- get("sqlContext", envir = .GlobalEnv)
       data <- createDataFrame(sqlContext, test)
       persist(data, "MEMORY_ONLY")
 
-      # How to calculate "outliers" column?
-      #outliers <- withColumn(stats, "outliers", stats$y < (stats$lower - coef * stats$iqr) | stats$y > (stats$upper + coef * stats$iqr))
-
       data <- SparkR::mutate(data, width = data$ymin * 0 + width,
-                                   weight = data$ymin * 0 + weight,
-                                   notchupper = data$middle + ((data$iqr / data$relvarwidth) * 1.58), 
-                                   notchlower = data$middle - ((data$iqr / data$relvarwidth) * 1.58))
-      data
+                                   weight = data$ymin * 0 + 1)
+
+      return(list(outliers, data))
     },
     sum = {
       if(length(grep("fill", columns(data))))

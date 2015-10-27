@@ -87,6 +87,7 @@ ggplot_build <- function(plot) {
 ggplot_build.SparkR <- function(plot) {
   if(length(plot$layers)==0) stop("No layers in plot", call.=FALSE)
 
+  outliers <- NULL
   plot <- plot_clone(plot)
 
   layers <- plot$layers
@@ -117,9 +118,13 @@ ggplot_build.SparkR <- function(plot) {
 
   panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
   data <- map_position.SparkR(data)
-#  add.group <- map_position.SparkR(add.group)
 
   data <- calculate_stats.SparkR(data, layers)
+  if(length(data) == 2) {
+     outliers <- data[[1]]
+     data <- data[[2]]
+  } 
+
   data <- map_statistic.SparkR(data, plot)
 
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
@@ -131,7 +136,13 @@ ggplot_build.SparkR <- function(plot) {
   data <- map_position.SparkR(data)
  
   data <- add_group.SparkR(data, add.group, plot)
+  data <- SparkR::arrange(data, "x")
   data <- list(collect(data))
+
+  if(!is.null(outliers)) {
+    outliers <- plyr::arrange(outliers, x)
+    data[[1]] <- cbind(data[[1]], outliers = outliers$outliers)
+  }
 
   if(plot$layers[[1]]$geom$objname == "bin2d") {
     group <- data.frame(group = 1:nrow(data[[1]]))
