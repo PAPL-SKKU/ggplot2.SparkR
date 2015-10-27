@@ -1,6 +1,6 @@
 Package: ggplot2
 Type: Package
-Title: An Implementation of the Grammar of Graphics
+Title: Supported ggplot2 graphs on SparkR
 Version: 0.8
 Authors@R: c(
     person("Jong Hyun", "Bae", role = c("aut", "cre"), email = "bnbbkr@gmail.com"),
@@ -8,7 +8,7 @@ Authors@R: c(
     person("Jae W.", "Lee", role = "aut", email = "jaewlee@skku.edu"),
     person("Sang Oh", "Jeong", role = "aut", email = "sangoh.jeong@sk.com")
     )
-Description: Test for ggplot2.SparkR
+Description: Supported ggplor2 graphs on SparkR.
 Depends:
     R (>= 2.14),
     stats,
@@ -21,7 +21,7 @@ Imports:
     reshape2,
     scales (>= 0.2.3),
     proto,
-    MASS,
+    MASS
 Suggests:
     quantreg,
     Hmisc,
