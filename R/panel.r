@@ -1,4 +1,4 @@
-# Panel object.
+
 #
 # A panel figures out how data is positioned within a panel of a plot,
 # coordinates information from scales, facets and coords.  Eventually all
@@ -165,43 +165,34 @@ map_position <- function(panel, data, x_scale, y_scale) {
 
 map_position.SparkR <- function(data) {
   data_and_types <- dtypes(data)
+  column_list <- columns(data)
 
   for(pair in data_and_types) {
     if(pair[1] == "x" && pair[2] == "string") {
-      distinct <- distinct(select(data, "x"))
-      distinct <- SparkR::rename(distinct, x_new = distinct$x)
-      
-      distinct_id <- bindIDs(distinct)
-      distinct_id <- SparkR::rename(distinct_id, x_new = distinct_id$"_1")
-      distinct_id <- select(withColumn(distinct_id, "x", cast(distinct_id$"_2", "integer")), "x_new", "x")
-      
-      col_list <- as.list(columns(data))
-      data <- SparkR::rename(data, x_old = data$x)
-      data <- SparkR::join(data, distinct_id, data$x_old == distinct_id$x_new, "inner")
-      data <- select(data, col_list)  
+      data <- withColumnRenamed(data, "x", "x_old")
+      disc_x <- bindIDs(SparkR::arrange(distinct(select(data, "x_old")), "x_old"))
+      disc_x <- withColumn(disc_x, "x", cast(disc_x$"_2", "integer"))
+      data <- SparkR::join(data, disc_x, data$x_old == disc_x$"_1", "inner")
+      data <- select(data, as.list(column_list))
     } else if(pair[1] == "x" && pair[2] == "int") {
       data <- SparkR::rename(data, x_map = data$x)
       data <- SparkR::withColumn(data, "x", cast(data$x_map, "double"))
+      data <- select(data, as.list(column_list))
     }
 
     if(pair[1] == "y" && pair[2] == "string") {
-      distinct <- distinct(select(data, "y"))
-      distinct <- SparkR::rename(distinct, y_new = distinct$y)
-
-      distinct_id <- bindIDs(distinct)
-      distinct_id <- SparkR::rename(distinct_id, y_new = distinct_id$"_1")
-      distinct_id <- select(withColumn(distinct_id, "y", cast(distinct_id$"_2", "integer")), "y_new", "y")
-      
-      col_list <- as.list(columns(data))
-      data <- SparkR::rename(data, y_old = data$y)
-      data <- SparkR::join(data, distinct_id, data$y_old == distinct_id$y_new, "inner")
-      data <- select(data, col_list)    
+      data <- withColumnRenamed(data, "y", "y_old")
+      disc_y <- bindIDs(SparkR::arrange(distinct(select(data, "y_old")), "y_old"))
+      disc_y <- withColumn(disc_y, "y", cast(disc_y$"_2", "integer"))
+      data <- SparkR::join(data, disc_y, data$y_old == disc_y$"_1", "inner")
+      data <- select(data, as.list(column_list))
     } else if(pair[1] == "y" && pair[2] == "int") {
       data <- SparkR::rename(data, y_map = data$y)
       data <- SparkR::withColumn(data, "y", cast(data$y_map, "double"))
+      data <- select(data, as.list(column_list))
     }
   }
-  
+
   data
 }
 
@@ -253,42 +244,49 @@ train_ranges.SparkR <- function(panel, data, plot) {
   panel$layout <- collect(panel$layout)
   x_scale_name <- panel$x_scales[[1]]$scale_name
   y_scale_name <- panel$y_scales[[1]]$scale_name
-
+  
   if(x_scale_name == "position_d" && y_scale_name == "position_d") {
-    panel$x_scales[[1]]$range$range <- collect(panel$x_scales[[1]]$range$range)[[1]]
-    panel$y_scales[[1]]$range$range <- collect(panel$y_scales[[1]]$range$range)[[1]]
+
+    panel$x_scales[[1]]$range$range <- collect(SparkR::arrange(panel$x_scales[[1]]$range$range, "x"))[[1]]
+    panel$y_scales[[1]]$range$range <- collect(SparkR::arrange(panel$y_scales[[1]]$range$range, "y"))[[1]]
+
   } else if(x_scale_name == "position_d" && y_scale_name == "position_c") {
-    panel$x_scales[[1]]$range$range <- collect(panel$x_scales[[1]]$range$range)[[1]]
+
+    panel$x_scales[[1]]$range$range <- collect(SparkR::arrange(panel$x_scales[[1]]$range$range, "x"))[[1]]
 
     if(!is.null(data[[1]]$ymin)) y_min <- min(data[[1]]$ymin)
-    else y_min <- if(min(data[[1]]$y) >= 1) 0 else min(data[[1]]$y)
+    else y_min <- min(data[[1]]$y)
     
     if(!is.null(data[[1]]$ymax)) y_max <- max(data[[1]]$ymax)
-    else y_max <- if(max(data[[1]]$y) >= 1) 0 else max(data[[1]]$y)
+    else y_max <- max(data[[1]]$y)
     
     panel$y_scales[[1]]$range$range <- c(y_min, y_max)
+
   } else if(x_scale_name == "position_c" && y_scale_name == "position_d") {
+    
     if(!is.null(data[[1]]$xmin)) x_min <- min(data[[1]]$xmin)
-    else x_min <- if(min(data[[1]]$x) >= 1) 0 else min(data[[1]]$x)
+    else x_min <- min(data[[1]]$x)
     
     if(!is.null(data[[1]]$xmax)) x_max <- max(data[[1]]$xmax)
-    else x_max <- if(max(data[[1]]$x) >= 1) 0 else max(data[[1]]$x)
+    else x_max <- max(data[[1]]$x)
 
     panel$x_scales[[1]]$range$range <- c(x_min, x_max)
-    panel$y_scales[[1]]$range$range <- collect(panel$y_scales[[1]]$range$range)[[1]]
+    panel$y_scales[[1]]$range$range <- collect(SparkR::arrange(panel$y_scales[[1]]$range$range, "y"))[[1]]
+
   } else if(x_scale_name == "position_c" && y_scale_name == "position_c") {
+    
     if(!is.null(data[[1]]$xmin)) x_min <- min(data[[1]]$xmin)
-    else x_min <- if(min(data[[1]]$x) >= 1) 0 else min(data[[1]]$x)
+    else x_min <- min(data[[1]]$x)
     
     if(!is.null(data[[1]]$xmax)) x_max <- max(data[[1]]$xmax)
-    else x_max <- if(max(data[[1]]$x) >= 1) 0 else max(data[[1]]$x)
+    else x_max <- max(data[[1]]$x)
 
     if(!is.null(data[[1]]$ymin)) y_min <- min(data[[1]]$ymin)
-    else y_min <- if(min(data[[1]]$y) >= 1) 0 else min(data[[1]]$y)
+    else y_min <- min(data[[1]]$y)
     
     if(!is.null(data[[1]]$ymax)) y_max <- max(data[[1]]$ymax)
-    else y_max <- if(max(data[[1]]$y) >= 1) 0 else max(data[[1]]$y)
-    
+    else y_max <- max(data[[1]]$y)
+ 
     panel$x_scales[[1]]$range$range <- c(x_min, x_max)
     panel$y_scales[[1]]$range$range <- c(y_min, y_max)
   }
@@ -316,17 +314,19 @@ calculate_stats <- function(panel, data, layers) {
 
 calculate_stats.SparkR <- function(data, layers) {
   stat_type <- layers[[1]]$stat$objname
+  sqlContext <- get("sqlContext", envir = .GlobalEnv)
+
   switch(stat_type, 
     bin = {
       width <- if(is.null(layers[[1]]$stat_params$width)) 0.9 else layers[[1]]$stat_params$width
       x_test <- select(data, "x")
- 
+
       if(dtypes(x_test)[[1]][2] == "int") {
         if(length(grep("fill", columns(data))))
-          data <- SparkR::count(groupBy(data, "x", "PANEL", "group", "fill"))
+          data <- SparkR::arrange(SparkR::count(groupBy(data, "x", "PANEL", "fill")), "x", "fill")
         else
-          data <- SparkR::count(groupBy(data, "x", "PANEL", "group"))
-     
+          data <- SparkR::arrange(SparkR::count(groupBy(data, "x", "PANEL")), "x")
+ 
       } else if(dtypes(x_test)[[1]][2] == "double") {
         range <- as.numeric(collect(select(data, min(data$x), max(data$x))))
         binwidth <- if(is.null(layers[[1]]$stat_params$binwidth)) diff(range) / 30
@@ -354,9 +354,13 @@ calculate_stats.SparkR <- function(data, layers) {
         width <- diff(breaks)
         left <- breaks[-length(breaks)]
         right <- breaks[-1]
+        zero_filter <- c()
 
         for(index in 1:length(left)) {
 	  filter_df <- filter(data, data$x >= left[index] & data$x < right[index])
+          if(nrow(filter_df) == 0) {
+            zero_filter <- append(zero_filter, index)
+          }
           filter_df <- SparkR::rename(filter_df, x_bin = filter_df$x)
           filter_df <- withColumn(filter_df, "x", 
                                   cast(isNull(filter_df$x_bin), "integer") + (left[index] + right[index]) / 2)
@@ -366,19 +370,37 @@ calculate_stats.SparkR <- function(data, layers) {
         }
  
         if(length(grep("fill", columns(data))))
-          data <- SparkR::count(groupBy(unioned, "PANEL", "group", "fill", "x"))
+          data <- SparkR::count(groupBy(unioned, "PANEL", "fill", "x"))
         else
-          data <- SparkR::count(groupBy(unioned, "PANEL", "group", "x"))
+          data <- SparkR::count(groupBy(unioned, "PANEL", "x"))
       }
-      
-      data <- SparkR::mutate(data, density = data$count / abs(data$count) / width,
-                                   ncount = data$count / abs(data$count),
-                                   width = data$count * 0 + width)
+
+      max_sum_count <- select(data, sum(data$count), max(data$count))
+      max_sum_count <- SparkR::rename(max_sum_count, sum_count = max_sum_count[[1]], max_count = max_sum_count[[2]])
+      data <- SparkR::join(data, max_sum_count)
+
+      data <- SparkR::mutate(data, density = data$count / width[1] / data$sum_count,
+                                   ncount = data$count / data$max_count,
+                                   width = data$count * 0 + width[1],
+                                   y = data$count)
       
       max_density <- select(data, max(abs(data$density)))
       max_density <- SparkR::rename(max_density, max_density = max_density[[1]])
-      temp_df <- SparkR::join(data, max_density)
-      data <- SparkR::arrange(withColumn(temp_df, "ndensity", temp_df$density / temp_df$max_density), "x")
+      data <- SparkR::join(data, max_density)
+
+      data <- withColumn(data, "ndensity", data$density / data$max_density)
+      data <- select(data, "PANEL", "x", "count", "density", "ncount", "width", "ndensity")
+   
+      if(dtypes(x_test)[[1]][2] == "double") {
+        remained <- data.frame(PANEL = 1, x = (left[zero_filter] + right[zero_filter]) / 2, 
+                               count = 0, density = 0, ncount = 0, width = width[1], ndensity = 0)
+
+        remained <- createDataFrame(sqlContext, remained)
+        data <- unionAll(data, remained)
+      }
+
+      data <- SparkR::arrange(data, "x")
+      persist(data, "MEMORY_ONLY")
     },
     bin2d = {
       bins_null <- layers[[1]]$stat_params$bins
@@ -386,88 +408,214 @@ calculate_stats.SparkR <- function(data, layers) {
 
       binwidth <- collect(select(data, (max(data$x) - min(data$x)) / bins, (max(data$y) - min(data$y)) / bins))
       range <- collect(select(data, min(data$x), max(data$x), min(data$y), max(data$y)))
-      origin <- unlist(range[c(-2, -4)])
+     
+      origin <- c(NA, NA)
+      x_types_int <- FALSE
+      y_types_int <- FALSE
+ 
+      types <- dtypes(select(data, "x"))
+      if(types[[1]][2] == "int" || types[[1]][2] == "integer") {
+        binwidth[1] <- 1
+        origin[1] <- -0.5
+        x_types_int <- TRUE
+      }
+      else {
+        binwidth[1] <- collect(select(data, (max(data$x) - min(data$x)) / bins))[[1]]
+        origin[1] <- unlist(range)[1]
+      }
+
+      types <- dtypes(select(data, "y"))
+      if(types[[1]][2] == "int" || types[[1]][2] == "integer") {
+        binwidth[2] <- 1 
+        origin[2] <- -0.5
+        y_types_int <- TRUE
+      }
+      else {
+        binwidth[2] <- collect(select(data, (max(data$y) - min(data$y)) / bins))[[1]]
+        origin[2] <- unlist(range)[3]
+      }
+
       breaks <- list(
         x = seq(origin[1], range[[2]] + binwidth[[1]], binwidth[[1]]),
         y = seq(origin[2], range[[4]] + binwidth[[2]], binwidth[[2]])
       )
-      
-      for(xy in 1:length(breaks)) {
-        col <- names(breaks)[xy] 
-        for(index in 1:(length(breaks[[xy]])-1)) {
-          lower <- breaks[[xy]][index]
-          upper <- breaks[[xy]][index + 1]
-         
-          if(index > 1) filter_df <- filter(data, data[[eval(col)]] > lower & data[[eval(col)]] <= upper)
-          else          filter_df <- filter(data, data[[eval(col)]] >= lower & data[[eval(col)]] <= upper)
 
-          filter_col <- cast(isNull(filter_df[[eval(col)]]), "integer")
-          temp_df <- SparkR::mutate(filter_df, xy_min = filter_col + lower, xy_max = filter_col + upper )
+      x_test <- select(data, "x")
+      x_test <- withColumnRenamed(x_test, "x", "x_OLD")
 
-          if(index > 1) unioned <- unionAll(unioned, temp_df)
-          else          unioned <- temp_df
-        }
-        
-        if(xy == 1) data <- SparkR::rename(unioned, xmin = unioned$xy_min, xmax = unioned$xy_max)
-        else        data <- SparkR::rename(unioned, ymin = unioned$xy_min, ymax = unioned$xy_max)
+      y_test <- select(data, "y")
+      y_test <- withColumnRenamed(y_test, "y", "y_OLD")
+ 
+      if(x_types_int == TRUE & y_types_int == TRUE) {
+        data <- SparkR::mutate(data, xmin = data$x - 0.5, xmax = data$x + 0.5,
+                                     ymin = data$y - 0.5, ymax = data$y + 0.5)
+
+      } else if(x_types_int == TRUE) {
+        for(index in 1:(length(breaks$y)-1)) {
+          lower <- breaks$y[index]
+          upper <- breaks$y[index + 1]
+          
+          if(index > 1) y_df <- filter(y_test, y_test$y_OLD > lower & y_test$y_OLD <= upper)
+          else          y_df <- filter(y_test, y_test$y_OLD >= lower & y_test$y_OLD <= upper)
+
+          y_df <- SparkR::mutate(y_df, ymin = cast(isNull(y_df$y_OLD), "integer") + lower,
+                                       ymax = cast(isNull(y_df$y_OLD), "integer") + upper)
+ 
+          if(index > 1) {unioned <- unionAll(unioned, y_df)}
+          else          {unioned <- y_df}
+        } 
+
+        unioned <- distinct(unioned)
+        data <- SparkR::join(data, unioned, data$y == unioned$y_OLD, "inner")
+        data <- SparkR::mutate(data, xmin = data$x - 0.5, xmax = data$x + 0.5)
+
+      } else if(y_types_int == TRUE) {
+        for(index in 1:(length(breaks$x)-1)) {
+          lower <- breaks$x[index]
+          upper <- breaks$x[index + 1]
+          
+          if(index > 1) x_df <- filter(x_test, x_test$x_OLD > lower & x_test$x_OLD <= upper)
+          else          x_df <- filter(x_test, x_test$x_OLD >= lower & x_test$x_OLD <= upper)
+
+          x_df <- SparkR::mutate(x_df, xmin = cast(isNull(x_df$x_OLD), "integer") + lower,
+                                       xmax = cast(isNull(x_df$x_OLD), "integer") + upper )
+ 
+          if(index > 1) {unioned <- unionAll(unioned, x_df)}
+          else          {unioned <- x_df}
+        } 
+
+        unioned <- distinct(unioned)
+        data <- SparkR::join(data, unioned, data$x == unioned$x_OLD, "inner")
+        data <- SparkR::mutate(data, ymin = data$y - 0.5, ymax = data$y + 0.5)
+
+      } else {
+        for(index in 1:(length(breaks$x)-1)) {
+          lower <- breaks$x[index]
+          upper <- breaks$x[index + 1]
+          
+          if(index > 1) x_df <- filter(x_test, x_test$x_OLD > lower & x_test$x_OLD <= upper)
+          else          x_df <- filter(x_test, x_test$x_OLD >= lower & x_test$x_OLD <= upper)
+
+          x_df <- SparkR::mutate(x_df, xmin = cast(isNull(x_df$x_OLD), "integer") + lower,
+                                       xmax = cast(isNull(x_df$x_OLD), "integer") + upper )
+ 
+          if(index > 1) {unioned_x <- unionAll(unioned_x, x_df)}
+          else          {unioned_x <- x_df}
+        } 
+
+        for(index in 1:(length(breaks$y)-1)) {
+          lower <- breaks$y[index]
+          upper <- breaks$y[index + 1]
+          
+          if(index > 1) y_df <- filter(y_test, y_test$y_OLD > lower & y_test$y_OLD <= upper)
+          else          y_df <- filter(y_test, y_test$y_OLD >= lower & y_test$y_OLD <= upper)
+
+          y_df <- SparkR::mutate(y_df, ymin = cast(isNull(y_df$y_OLD), "integer") + lower,
+                                       ymax = cast(isNull(y_df$y_OLD), "integer") + upper )
+ 
+          if(index > 1) {unioned_y <- unionAll(unioned_y, y_df)}
+          else          {unioned_y <- y_df}
+        } 
+
+        unioned_x <- distinct(unioned_x)
+        unioned_y <- distinct(unioned_y)
+
+        data <- SparkR::join(data, unioned_x, data$x == unioned_x$x_OLD, "inner")
+        data <- SparkR::join(data, unioned_y, data$y == unioned_y$y_OLD, "inner")
       }
-
-      if(length(grep("fill", columns(data))))
-        data <- SparkR::count(groupBy(data, "PANEL", "group", "fill", "xmin", "xmax", "ymin", "ymax"))
-      else
-        data <- SparkR::count(groupBy(data, "PANEL", "group", "xmin", "xmax", "ymin", "ymax"))
+       
+      data <- select(data, "x", "y", "PANEL", "xmin", "xmax", "ymin", "ymax")
+      data <- SparkR::count(groupBy(data, "PANEL", "xmin", "xmax", "ymin", "ymax"))
 
       sum_count <- select(data, sum(data$count))
       sum_count <- SparkR::rename(sum_count, sum_count = sum_count[[1]])
-      temp_df <- SparkR::join(data, sum_count)
-      data <- withColumn(temp_df, "density", temp_df$count / temp_df$sum_count)
+      
+      data <- SparkR::join(data, sum_count)
+      data <- withColumn(data, "density", data$count / data$sum_count)
     },
     boxplot = {
       qs <- c(0, 0.25, 0.5, 0.75, 1)
       coef_null <- layers[[1]]$stat_params$coef
       width_null <- layers[[1]]$stat_params$width
-      weight_null <- layers[[1]]$geom_params$weight
 
       coef <- if(is.null(coef_null)) 1.5 else coef_null
       width <- if(is.null(width_null)) 0.75 else width_null
-      weight <- if(is.null(weight_null)) 1 else weight_null
 
-      if(length(grep("fill", columns(data))))
-        stats <- agg(groupBy(data, "x", "fill", "PANEL", "group"), ymin = min(data$y),
-                     lower = min(data$y)+(max(data$y)-min(data$y))*qs[2],
-                     middle = min(data$y)+(max(data$y)-min(data$y))*qs[3],
-                     upper = min(data$y)+(max(data$y)-min(data$y))*qs[4],
-                     ymax = max(data$y), iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
-                     relvarwidth = sqrt(sum(cast(isNotNull(data$y), "integer"))))
-      else
-        stats <- agg(groupBy(data, "x", "PANEL", "group"), ymin = min(data$y),
-                     lower = min(data$y)+(max(data$y)-min(data$y))*qs[2],
-                     middle = min(data$y)+(max(data$y)-min(data$y))*qs[3],
-                     upper = min(data$y)+(max(data$y)-min(data$y))*qs[4],
-                     ymax = max(data$y), iqr = (max(data$y)-min(data$y))*(qs[4]-qs[2]),
-                     relvarwidth = sqrt(sum(cast(isNotNull(data$y), "integer"))))
+      column_fill <- length(grep("fill", columns(data)))
 
-      # How to calculate "outliers" column?
-      #outliers <- withColumn(stats, "outliers", stats$y < (stats$lower - coef * stats$iqr) | stats$y > (stats$upper + coef * stats$iqr))
+      if(column_fill) {
+        distinct_data <- collect(distinct(select(data, "x", "PANEL", "fill")))
+      } else {
+        distinct_data <- collect(distinct(select(data, "x", "PANEL")))
+      }
+     
+      for(i in 1:nrow(distinct_data)) {
+        if(column_fill) {
+          y <- SparkR::filter(data, data$x == distinct_data$x[i] &
+                                    data$PANEL == distinct_data$PANEL[i] &
+                                    data$fill == distinct_data$fill[i])
+        } else {
+          y <- SparkR::filter(data, data$x == distinct_data$x[i] & 
+                                    data$PANEL == distinct_data$PANEL[i])
+        }
 
-      stats <- SparkR::mutate(stats, width = stats$ymin * 0 + width,
-                                     weight = stats$ymin * 0 + weight,
-                                     notchupper = stats$middle + ((stats$iqr / stats$relvarwidth) * 1.58), 
-                                     notchlower = stats$middle - ((stats$iqr / stats$relvarwidth) * 1.58))
-      data <- stats
+        y <- collect(SparkR::arrange(select(y, "y"), "y"))$y
+
+#        if(length(unique(weight)) != 1) {
+#          try_require("quantreg")
+#          stats <- as.numeric(coef(rq(y ~ 1, weights = weight, tau = qs)))
+#        } else {
+          stats <- as.numeric(quantile(y, qs))
+#        }
+
+        names(stats) <- c("ymin", "lower", "middle", "upper", "ymax")
+        iqr <- diff(stats[c(2, 4)])
+        outliers <- y < (stats[2] - coef * iqr) | y > (stats[4] + coef * iqr)
+
+        if(any(outliers)) {
+          stats[c(1, 5)] <- range(c(stats[2:4], y[!outliers]), na.rm = TRUE)
+        }
+
+        df <- as.data.frame(as.list(stats))
+        
+        df$outliers <- I(list(y[outliers]))
+      
+#        if(is.null(weight)) {
+          n <- sum(!is.na(y))
+#        } else {
+#          n <- sum(weight[!is.na(y) & !is.na(weight)])
+#        }
+
+        df$notchupper <- df$middle + 1.58 * iqr / sqrt(n)
+        df$notchlower <- df$middle - 1.58 * iqr / sqrt(n)
+        df$relvarwidth <- sqrt(n)
+
+        distinct <- cbind(distinct_data[i, ], df)
+
+        if(i > 1) test <- rbind(test, distinct)
+        else test <- distinct
+      }
+
+      outliers <- test[c("x", "outliers")]
+      test$outliers <- NULL
+
+      data <- createDataFrame(sqlContext, test)
+      persist(data, "MEMORY_ONLY")
+
+      data <- SparkR::mutate(data, width = data$ymin * 0 + width,
+                                   weight = data$ymin * 0 + 1)
+
+      return(list(outliers, data))
     },
     sum = {
       if(length(grep("fill", columns(data))))
-        data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "fill", "group"))
+        data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "fill"))
       else
-        data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "group"))
+        data <- SparkR::count(groupBy(data, "PANEL", "x", "y"))
 
-      count_group <- SparkR::count(groupBy(data, "group"))
-
-      data <- SparkR::rename(data, n = data$count, group_old = data$group)
-      data <- SparkR::join(data, count_group, data$group_old == count_group$group, "inner")
-      data <- withColumn(data, "prop", data$count^(-1))
-      data <- select(data, "PANEL", "x", "y", "group", "n", "prop")
+      data <- SparkR::rename(data, n = data$count)
+      data <- withColumn(data, "prop", data$n^(-1))
+      data <- select(data, "PANEL", "x", "y", "n", "prop")
     }
   )
 

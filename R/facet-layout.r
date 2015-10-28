@@ -114,7 +114,7 @@ layout_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = 
   base <- unrowname(layout_base(data, vars, drop = drop))
   id <- id(base, drop = TRUE)
   n <- attr(id, "n")
-
+  
   dims <- wrap_dims(n, nrow, ncol)
   layout <- data.frame(PANEL = factor(id, levels = seq_len(n)))
 
@@ -124,15 +124,35 @@ layout_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = 
     layout$ROW <- as.integer(dims[1] - (id - 1L) %/% dims[2])
   }
   layout$COL <- as.integer((id - 1L) %% dims[2] + 1L)
-  
+ 
   panels <- cbind(layout, unrowname(base))
   panels <- panels[order(panels$PANEL), , drop = FALSE]
   rownames(panels) <- NULL
   
   panels
 }
-  
+
 layout_wrap.SparkR <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = TRUE, drop = TRUE) {
+  vars <- as.character(unlist(vars))
+
+  data <- data[1][[1]]
+  
+  panels <- bindIDs(distinct(select(data, eval(vars)), eval(vars)))
+  panels <- withColumn(panels, eval(vars), panels$"_1")
+  panels <- withColumn(panels, "PANEL", cast(panels$"_2", "integer"))
+  n <- SparkR::count(panels)
+  dims <- wrap_dims(n, nrow, ncol)
+
+  
+  panels <- withColumn(panels, "ROW", floor((panels$PANEL - 1) / dims[2] + 1))
+  panels <- withColumn(panels, "COL", pmod(panels$PANEL - 1, lit(dims[2])) + 1)
+  
+  panels <- select(panels, eval(vars), "PANEL", "ROW", "COL")
+  
+  panels
+}
+
+layout_wrap.SparkR_test <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = TRUE, drop = TRUE) {
   vars <- as.character(unlist(vars))
   if(length(vars) == 0) stop("Error: No variable for calculate")
 

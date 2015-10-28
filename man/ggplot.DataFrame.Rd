@@ -4,11 +4,11 @@
 \alias{ggplot.DataFrame}
 \title{Create a new ggplot plot from a Spark DataFrame}
 \usage{
-\method{ggplot}{DataFrame}(df, mapping = aes(), ...,
+\method{ggplot}{DataFrame}(data, mapping = aes(), ...,
   environment = parent.frame())
 }
 \arguments{
-\item{df}{default DataFrame for plot}
+\item{data}{default DataFrame for plot}
 
 \item{mapping}{default list of aesthetic mappins (these can be colour,
 size, shape, line type -- see individual geom functions for more details)}

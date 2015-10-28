@@ -208,6 +208,7 @@ Layer <- proto(expr = {
 
     # Add any new scales, if needed
     scales_add_defaults(plot$scales, data, new, plot$plot_env)
+
     # Transform the values, if the scale say it's ok
     # (see stat_spoke for one exception)
     if (.$stat$retransform) {
@@ -273,10 +274,12 @@ map_statistic.SparkR <- function(data, plot) {
   aesthetics <- compact(aesthetics)
 
   new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
-
+  
   if(length(new) == 0) return(data)
 
   data <- withColumn(data, names(new), data[[as.character(new)]])
+  scales_add_defaults(plot$scales, data, new, plot$plot_env)
+
   data
 }
 
@@ -343,10 +346,10 @@ reparameterise.SparkR <- function(data, plot) {
 
       if(length(grep("fill", columns(data))) == 0)
         data <- select(data, "y", "count", "x", "ndensity", "ncount", "density", "width",
-                             "PANEL", "group", "ymin", "ymax", "xmin", "xmax")
+                             "PANEL", "ymin", "ymax", "xmin", "xmax")
       else
         data <- select(data, "y", "count", "x", "ndensity", "ncount", "density", "fill", "width",
-                             "PANEL", "group", "ymin", "ymax", "xmin", "xmax")
+                             "PANEL", "ymin", "ymax", "xmin", "xmax")
     },
     boxplot = {
       params <- plot$layers[[1]]$geom_params
@@ -363,11 +366,11 @@ reparameterise.SparkR <- function(data, plot) {
       if(length(grep("fill", columns(data))) == 0)
         data <- select(data, "ymin", "lower", "middle", "upper", "ymax",
                              "notchupper", "notchlower", "x", "width",
-                             "PANEL", "group", "weight", "xmin", "xmax")
+                             "PANEL", "weight", "xmin", "xmax")
       else
         data <- select(data, "ymin", "lower", "middle", "upper", "ymax",
                              "notchupper", "notchlower", "x", "fill", "width",
-                             "PANEL", "group", "weight", "xmin", "xmax")
+                             "PANEL", "weight", "xmin", "xmax")
     }
   )
 

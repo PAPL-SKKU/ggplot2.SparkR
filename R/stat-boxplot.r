@@ -53,7 +53,7 @@ StatBoxplot <- proto(Stat, {
       names(stats) <- c("ymin", "lower", "middle", "upper", "ymax")
       iqr <- diff(stats[c(2, 4)])
       outliers <- y < (stats[2] - coef * iqr) | y > (stats[4] + coef * iqr)
-      
+
       if (any(outliers)) {
         stats[c(1, 5)] <- range(c(stats[2:4], y[!outliers]), na.rm=TRUE)
       }
@@ -69,7 +69,7 @@ StatBoxplot <- proto(Stat, {
         # Sum up weights for non-NA positions of y and weight
         n <- sum(weight[!is.na(y) & !is.na(weight)])
       }
-      
+
       df$notchupper <- df$middle + 1.58 * iqr / sqrt(n)
       df$notchlower <- df$middle - 1.58 * iqr / sqrt(n)
 
