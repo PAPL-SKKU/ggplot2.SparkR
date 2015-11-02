@@ -388,7 +388,11 @@ calculate_stats.SparkR <- function(data, layers) {
       data <- SparkR::join(data, max_density)
 
       data <- withColumn(data, "ndensity", data$density / data$max_density)
-      data <- select(data, "PANEL", "x", "count", "density", "ncount", "width", "ndensity")
+
+      if(length(grep("fill", columns(data))))
+        data <- select(data, "PANEL", "fill", "x", "count", "density", "ncount", "width", "ndensity")
+      else
+        data <- select(data, "PANEL", "x", "count", "density", "ncount", "width", "ndensity")
    
       if(dtypes(x_test)[[1]][2] == "double") {
         remained <- data.frame(PANEL = 1, x = (left[zero_filter] + right[zero_filter]) / 2, 
