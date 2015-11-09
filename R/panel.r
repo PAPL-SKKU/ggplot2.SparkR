@@ -97,6 +97,8 @@ train_position <- function(panel, data, x_scale, y_scale) {
 }
 
 train_position.SparkR <- function(panel, data, x_scale, y_scale) {
+  layer_data <- data[[1]]
+
   # Initialise scales if needed, and possible.
   if (is.null(panel$x_scales) && !is.null(x_scale)) {
     panel$x_scales <- rlply(1, scale_clone(x_scale))
@@ -107,18 +109,20 @@ train_position.SparkR <- function(panel, data, x_scale, y_scale) {
   }
 
   # Add x, y range in panel$x_scales[[1]]$range & panel$y_scales[[1]]$range
-  # continuous : max, min value
-  # discrete : unique value of column
+  # continuous: nothing
+  # discrete: unique value of column
 
-  if (!is.null(x_scale) && length(grep("x", columns(data))) != 0 && is.null(panel$x_scales[[1]]$range$range)) {
+  if(!is.null(x_scale) && length(grep("x", columns(layer_data))) != 0 &&
+      is.null(panel$x_scales[[1]]$range$range)) {
     if(panel$x_scales[[1]]$scale_name == "position_d") {
-      panel$x_scales[[1]]$range$range <- distinct(select(data, data$x))
+      panel$x_scales[[1]]$range$range <- distinct(select(layer_data, layer_data$x))
     }
   }
 
-  if (!is.null(y_scale) && length(grep("y", columns(data))) != 0 && is.null(panel$y_scales[[1]]$range$range)) {
+  if(!is.null(y_scale) && length(grep("y", columns(layer_data))) != 0 &&
+      is.null(panel$y_scales[[1]]$range$range)) {
     if(panel$y_scales[[1]]$scale_name == "position_d") {
-      panel$y_scales[[1]]$range$range <- distinct(select(data, data$y))
+      panel$y_scales[[1]]$range$range <- distinct(select(layer_data, layer_data$y))
     }
   }
   
@@ -163,37 +167,55 @@ map_position <- function(panel, data, x_scale, y_scale) {
   })
 }
 
+# Map data using Spark DataFrame.
+#
+# This operation must be idempotent because it is applied twice: both before
+# and after statistical transformation.
+#
+# @param data a list of Spark DataFrames (one for each layer)
 map_position.SparkR <- function(data) {
-  data_and_types <- dtypes(data)
-  column_list <- columns(data)
+  # Loop through x and y variable, mapping, then joining
+  # back together
+  lapply(data, function(layer_data) {
+    data_and_types <- dtypes(layer_data)
+    column_list <- columns(layer_data)
 
-  for(pair in data_and_types) {
-    if(pair[1] == "x" && pair[2] == "string") {
-      data <- withColumnRenamed(data, "x", "x_old")
-      disc_x <- bindIDs(SparkR::arrange(distinct(select(data, "x_old")), "x_old"))
-      disc_x <- withColumn(disc_x, "x", cast(disc_x$"_2", "integer"))
-      data <- SparkR::join(data, disc_x, data$x_old == disc_x$"_1", "inner")
-      data <- select(data, as.list(column_list))
-    } else if(pair[1] == "x" && pair[2] == "int") {
-      data <- SparkR::rename(data, x_map = data$x)
-      data <- SparkR::withColumn(data, "x", cast(data$x_map, "double"))
-      data <- select(data, as.list(column_list))
+    for(pair in data_and_types) {
+      if(pair[1] == "x" && pair[2] == "string") {
+        # Mapping an unique number for each unique x value
+        layer_data <- withColumnRenamed(layer_data, "x", "x_old")
+        
+	disc_x <- bindIDs(SparkR::arrange(distinct(select(layer_data, "x_old")), "x_old"))
+        disc_x <- withColumn(disc_x, "x", cast(disc_x$"_2", "integer"))
+        
+	layer_data <- SparkR::join(layer_data, disc_x, layer_data$x_old == disc_x$"_1", "inner")
+        layer_data <- select(layer_data, as.list(column_list))
+      } else if(pair[1] == "x" && pair[2] == "int") {
+        # Change integer-typed x value to double-typed x value
+        layer_data <- SparkR::rename(layer_data, x_map = layer_data$x)
+        layer_data <- SparkR::withColumn(layer_data, "x", cast(layer_data$x_map, "double"))
+        layer_data <- select(layer_data, as.list(column_list))
+      }
+
+      if(pair[1] == "y" && pair[2] == "string") {
+        # Mapping an unique number for each unique y value
+        layer_data <- withColumnRenamed(layer_data, "y", "y_old")
+        
+	disc_y <- bindIDs(SparkR::arrange(distinct(select(layer_data, "y_old")), "y_old"))
+        disc_y <- withColumn(disc_y, "y", cast(disc_y$"_2", "integer"))
+        
+	layer_data <- SparkR::join(layer_data, disc_y, layer_data$y_old == disc_y$"_1", "inner")
+        layer_data <- select(layer_data, as.list(column_list))
+      } else if(pair[1] == "y" && pair[2] == "int") {
+        # Change integer-typed y value to double-typed y value
+        layer_data <- SparkR::rename(layer_data, y_map = layer_data$y)
+        layer_data <- SparkR::withColumn(layer_data, "y", cast(layer_data$y_map, "double"))
+        layer_data <- select(layer_data, as.list(column_list))
+      }
     }
 
-    if(pair[1] == "y" && pair[2] == "string") {
-      data <- withColumnRenamed(data, "y", "y_old")
-      disc_y <- bindIDs(SparkR::arrange(distinct(select(data, "y_old")), "y_old"))
-      disc_y <- withColumn(disc_y, "y", cast(disc_y$"_2", "integer"))
-      data <- SparkR::join(data, disc_y, data$y_old == disc_y$"_1", "inner")
-      data <- select(data, as.list(column_list))
-    } else if(pair[1] == "y" && pair[2] == "int") {
-      data <- SparkR::rename(data, y_map = data$y)
-      data <- SparkR::withColumn(data, "y", cast(data$y_map, "double"))
-      data <- select(data, as.list(column_list))
-    }
-  }
-
-  data
+    layer_data
+  })
 }
 
 # Function for applying scale function to multiple variables in a given
@@ -299,7 +321,6 @@ train_ranges.SparkR <- function(panel, data, plot) {
 # @param layers list of layers
 # @param data a list of data frames (one for each layer)
 calculate_stats <- function(panel, data, layers) {
-
   lapply(seq_along(data), function(i) {
     d <- data[[i]]
     l <- layers[[i]]
@@ -311,7 +332,16 @@ calculate_stats <- function(panel, data, layers) {
   })
 }
 
-calculate_stats.SparkR <- function(data, layers) {
+calculate_stats.SparkR <- function(panel, data, layers) {
+  lapply(seq_along(data), function(i) {
+    d <- data[[i]]
+    l <- layers[[i]]
+
+    l$calc_statistic(d, NULL)
+  })
+}
+
+calculate_stats.SparkR_test <- function(data, layers) {
   stat_type <- layers[[1]]$stat$objname
   sqlContext <- get("sqlContext", envir = .GlobalEnv)
 

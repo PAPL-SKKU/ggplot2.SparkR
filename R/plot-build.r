@@ -104,14 +104,18 @@ ggplot_build.SparkR <- function(plot) {
     out
   }
 
+  # Initialise panels, add extra data for margins & missing facetting
+  # variables, and add on a PANEL variable to data
   panel <- new_panel()
   panel <- train_layout(panel, plot$facet, layer_data, plot$data)
-  data <- facet_map_layout(plot$facet, plot$data, panel$layout)
+  data <- map_layout(panel, plot$facet, layer_data, plot$data)
 
-  data <- compute_aesthetics.SparkR(data, plot)
-  add.group <- make_group.SparkR(data)
+  # Compute aesthetics to produce data with generalised variable names
+  data <- dlapply(function(d, p) p$compute_aesthetics.SparkR(d, plot))
+  add.group <- lapply(data, make_group.SparkR)
 
-  data <- scales_transform_df.SparkR(scales, data)
+  # Transform all scales
+  data <- lapply(data, scales_transform_df.SparkR, scales = scales)
 
   scale_x <- function() scales$get_scales("x")
   scale_y <- function() scales$get_scales("y")
@@ -119,7 +123,9 @@ ggplot_build.SparkR <- function(plot) {
   panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
   data <- map_position.SparkR(data)
 
-  data <- calculate_stats.SparkR(data, layers)
+  # Apply and map statistics
+  data <- calculate_stats.SparkR(panel, data, layers)
+  stop("ggplot_build.SparkR")
   if(length(data) == 2) {
      outliers <- data[[1]]
      data <- data[[2]]

@@ -33,21 +33,27 @@ Stat <- proto(TopLevel, expr={
     # stats <- merge(stats, unique, by = "group")
     # stats[stats$ORDER, ]
 
-    groups <- split(data, data$group)
-    stats <- lapply(groups, function(group)
-      .$calculate(data = group, scales = scales, ...))
+    if(!is.null(scales)) {
+      groups <- split(data, data$group)
+      stats <- lapply(groups, function(group)
+        .$calculate(data = group, scales = scales, ...))
 
-    stats <- mapply(function(new, old) {
-      if (empty(new)) return(data.frame())
-      unique <- uniquecols(old)
-      missing <- !(names(unique) %in% names(new))
-      cbind(
-        new,
-        unique[rep(1, nrow(new)), missing,drop=FALSE]
-      )
-    }, stats, groups, SIMPLIFY=FALSE)
+      stats <- mapply(function(new, old) {
+        if (empty(new)) return(data.frame())
+        unique <- uniquecols(old)
+        missing <- !(names(unique) %in% names(new))
+        cbind(
+          new,
+          unique[rep(1, nrow(new)), missing,drop=FALSE]
+        )
+      }, stats, groups, SIMPLIFY=FALSE)
 
-    do.call(rbind.fill, stats)
+      do.call(rbind.fill, stats)
+    } else {
+      stats <- .$calculate.SparkR(data = data, ...)
+
+      stats
+    }
   }
 
 

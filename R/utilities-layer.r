@@ -48,10 +48,13 @@ isDiscrete <- function(data) {
       #}
     }
 
-    if(isDiscrete && isDiscreteY) column_arr <- c("x", "y")
-    else if(isDiscrete)           column_arr <- c("x")
-    else                          column_arr <- c() 
-
+    if(isDiscrete && isDiscreteY) {
+      column_arr <- c("x", "y")
+    } else if(isDiscrete) {
+      column_arr <- c("x")
+    } else {
+      column_arr <- c()
+    }
   } else {
     column_arr <- c("grouped")  
   }
@@ -65,26 +68,23 @@ isDiscrete <- function(data) {
 make_group.SparkR <- function(data) {
   discrete_col <- append(isDiscrete(data), "PANEL")
   disc <- distinct(select(data, as.list(discrete_col)))
-  disc <- map_position.SparkR(disc)
-
+  disc <- map_position.SparkR(list(disc))[[1]]
   complete_col <- "group"
 
   for(index in 1:length(discrete_col)) {
-    temp_df <- select(disc, eval(discrete_col[index]))
+    temp_df <- select(disc, discrete_col[index])
     type_disc <- unlist(dtypes(temp_df))[2]
     temp_df <- bindIDs(temp_df)
 
-    temp_df <- withColumn(temp_df, eval(discrete_col[index]), cast(temp_df$"_1", eval(type_disc)))
+    temp_df <- withColumn(temp_df, discrete_col[index], cast(temp_df$"_1", eval(type_disc)))
 
     temp_df <- withColumn(temp_df, "group_id", cast(temp_df$"_2", "integer"))
-    temp_df <- select(temp_df, eval(discrete_col[index]), "group_id")
+    temp_df <- select(temp_df, discrete_col[index], "group_id")
     complete_col <- append(complete_col, discrete_col[index])
     
     if(index == 1) {
-      joined <- temp_df
-      joined <- withColumnRenamed(joined, "group_id", "group")
-    }
-    else {
+      joined <- withColumnRenamed(temp_df, "group_id", "group")
+    } else {
       joined <- SparkR::join(joined, temp_df, joined$group == temp_df$group_id, "inner")
     }
     

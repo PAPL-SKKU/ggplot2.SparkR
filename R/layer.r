@@ -129,7 +129,26 @@ Layer <- proto(expr = {
     .$position$print()
   }
 
+  compute_aesthetics.SparkR <- function(., data, plot) {
+    aesthetics <- .$layer_mapping(plot$mapping)
+    values <- as.character(unlist(aesthetics))
+    keys <- names(aesthetics)
+    data <- select(data, append(as.list(values), "PANEL"))
 
+    for(index in 1:length(keys)) {
+      if(keys[index] == "group") keys[index] <- "grouped"
+      data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
+    }
+
+    if(!is.null(.$geom_params$group)) {
+      aesthetics["group"] <- .$geom_params$group
+    }
+
+    scales_add_defaults(plot$scales, data, aesthetics, plot$plot_env)
+    
+    data
+  }
+  
   compute_aesthetics <- function(., data, plot) {
     aesthetics <- .$layer_mapping(plot$mapping)
 
@@ -176,14 +195,19 @@ Layer <- proto(expr = {
       paste("stat_", .$stat$objname, sep=""))
 
     res <- NULL
-    try(res <- do.call(.$stat$calculate_groups, c(
-      list(data=as.name("data"), scales=as.name("scales")),
-      .$stat_params)
-    ))
-    if (is.null(res)) return(data.frame())
 
+    if(!is.null(scales)) {
+      try(res <- do.call(.$stat$calculate_groups, c(
+        list(data=as.name("data"), scales=as.name("scales")),
+        .$stat_params)
+      ))
+      if (is.null(res)) return(data.frame())
+    } else {
+      try(res <- do.call(.$stat$calculate_groups.SparkR,
+      			 c(list(data = as.name("data"), scales = as.name("scales")), .$stat_params)))
+    }
+      
     res
-
   }
 
 
@@ -249,20 +273,6 @@ Layer <- proto(expr = {
 
   class <- function(.) "layer"
 })
-
-compute_aesthetics.SparkR <- function(df, plot) {
-  values <- as.character(unlist(plot$mapping))
-  keys <- names(plot$mapping)
-  data <- select(df, append(as.list(values), "PANEL"))
-
-  for(index in 1:length(keys)) {
-    if(keys[index] == "group") keys[index] <- "grouped"
-    data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
-  }
-
-  scales_add_defaults(plot$scales, data, plot$mapping, plot$plot_env)
-  data
-}
 
 map_statistic.SparkR <- function(data, plot) {
   layers <- plot$layers[[1]]

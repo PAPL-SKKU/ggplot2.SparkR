@@ -83,13 +83,14 @@ scales_transform_df.SparkR <- function(scales, data) {
         scale_aes_old <- paste0(scale_aes, "_OLD")
  
         if(scale_type == "log-10") {
-          data <- withColumnRenamed(data, eval(scale_aes), eval(scale_aes_old))
-          data <- withColumn(data, eval(scale_aes), log10(data[[eval(scale_aes_old)]])) 
+          data <- withColumnRenamed(data, scale_aes, scale_aes_old)
+          data <- withColumn(data, scale_aes, log10(data[[scale_aes_old]])) 
         }
         scales$scales[[index]]$trans$done <- TRUE
       }
     }
   }
+
   data
 }
 
