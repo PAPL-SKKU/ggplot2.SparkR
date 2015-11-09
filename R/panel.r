@@ -274,7 +274,6 @@ train_ranges.SparkR <- function(panel, data, plot) {
     panel$y_scales[[1]]$range$range <- collect(SparkR::arrange(panel$y_scales[[1]]$range$range, "y"))[[1]]
 
   } else if(x_scale_name == "position_c" && y_scale_name == "position_c") {
-    
     if(!is.null(data[[1]]$xmin)) x_min <- min(data[[1]]$xmin)
     else x_min <- min(data[[1]]$x)
     
@@ -389,7 +388,11 @@ calculate_stats.SparkR <- function(data, layers) {
       data <- SparkR::join(data, max_density)
 
       data <- withColumn(data, "ndensity", data$density / data$max_density)
-      data <- select(data, "PANEL", "x", "count", "density", "ncount", "width", "ndensity")
+
+      if(length(grep("fill", columns(data))))
+        data <- select(data, "PANEL", "fill", "x", "count", "density", "ncount", "width", "ndensity")
+      else
+        data <- select(data, "PANEL", "x", "count", "density", "ncount", "width", "ndensity")
    
       if(dtypes(x_test)[[1]][2] == "double") {
         remained <- data.frame(PANEL = 1, x = (left[zero_filter] + right[zero_filter]) / 2, 
