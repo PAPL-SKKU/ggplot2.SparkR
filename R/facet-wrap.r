@@ -89,16 +89,15 @@ facet_train_layout.wrap <- function(facet, data) {
     panels <- layout_wrap.SparkR(data, facet$facets, facet$nrow, facet$ncol, 
        facet$as.table, facet$drop)
     
-    panels <- SparkR::mutate(panels, SCALE_X = cast(isNull(panels[[1]]), "integer") + 1,
-                                     SCALE_Y = cast(isNull(panels[[1]]), "integer") + 1)
+    panels <- SparkR::mutate(panels, SCALE_X = lit(1),
+                                     SCALE_Y = lit(1))
 
     nrow <- select(panels, max(panels$ROW))
     nrow <- SparkR::rename(nrow, MAX = nrow[[1]])
     panels <- SparkR::join(panels, nrow)
     
     # Figure out where axes should go
-    panels <- withColumn(panels, "AXIS_X", panels$ROW == panels$MAX)
-    panels <- withColumn(panels, "AXIS_Y", panels$COL == 1)
+    panels <- SparkR::mutate(panels, AXIS_X = (panels$ROW == panels$MAX), AXIS_Y = (panels$COL == 1))
   }
   
   panels

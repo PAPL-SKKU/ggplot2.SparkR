@@ -225,8 +225,7 @@ facet_train_layout.grid <- function(facet, data) {
     layout <- layout_grid.SparkR(data, facet$rows, facet$cols, facet$margins,
 				drop = facet$drop, as.table = facet$as.table)
     
-    layout <- SparkR::mutate(layout, SCALE_X = cast(isNull(layout[[1]]), "integer") + 1, 
-                                     SCALE_Y = cast(isNull(layout[[1]]), "integer") + 1)
+    layout <- SparkR::mutate(layout, SCALE_X = lit(1), SCALE_Y = lit(1))
   }
  
   layout

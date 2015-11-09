@@ -361,8 +361,7 @@ calculate_stats.SparkR <- function(data, layers) {
             zero_filter <- append(zero_filter, index)
           }
           filter_df <- SparkR::rename(filter_df, x_bin = filter_df$x)
-          filter_df <- withColumn(filter_df, "x", 
-                                  cast(isNull(filter_df$x_bin), "integer") + (left[index] + right[index]) / 2)
+          filter_df <- withColumn(filter_df, "x", lit((left[index] + right[index]) / 2))
   
           if(index == 1) unioned <- filter_df
           else unioned <- unionAll(unioned, filter_df)
@@ -380,7 +379,7 @@ calculate_stats.SparkR <- function(data, layers) {
 
       data <- SparkR::mutate(data, density = data$count / width[1] / data$sum_count,
                                    ncount = data$count / data$max_count,
-                                   width = data$count * 0 + width[1],
+                                   width = lit(width[1]),
                                    y = data$count)
       
       max_density <- select(data, max(abs(data$density)))
@@ -461,8 +460,7 @@ calculate_stats.SparkR <- function(data, layers) {
           if(index > 1) y_df <- filter(y_test, y_test$y_OLD > lower & y_test$y_OLD <= upper)
           else          y_df <- filter(y_test, y_test$y_OLD >= lower & y_test$y_OLD <= upper)
 
-          y_df <- SparkR::mutate(y_df, ymin = cast(isNull(y_df$y_OLD), "integer") + lower,
-                                       ymax = cast(isNull(y_df$y_OLD), "integer") + upper)
+          y_df <- SparkR::mutate(y_df, ymin = lit(lower), ymax = lit(upper))
  
           if(index > 1) {unioned <- unionAll(unioned, y_df)}
           else          {unioned <- y_df}
@@ -480,8 +478,7 @@ calculate_stats.SparkR <- function(data, layers) {
           if(index > 1) x_df <- filter(x_test, x_test$x_OLD > lower & x_test$x_OLD <= upper)
           else          x_df <- filter(x_test, x_test$x_OLD >= lower & x_test$x_OLD <= upper)
 
-          x_df <- SparkR::mutate(x_df, xmin = cast(isNull(x_df$x_OLD), "integer") + lower,
-                                       xmax = cast(isNull(x_df$x_OLD), "integer") + upper )
+          x_df <- SparkR::mutate(x_df, xmin = lit(lower), xmax = lit(upper))
  
           if(index > 1) {unioned <- unionAll(unioned, x_df)}
           else          {unioned <- x_df}
@@ -499,8 +496,7 @@ calculate_stats.SparkR <- function(data, layers) {
           if(index > 1) x_df <- filter(x_test, x_test$x_OLD > lower & x_test$x_OLD <= upper)
           else          x_df <- filter(x_test, x_test$x_OLD >= lower & x_test$x_OLD <= upper)
 
-          x_df <- SparkR::mutate(x_df, xmin = cast(isNull(x_df$x_OLD), "integer") + lower,
-                                       xmax = cast(isNull(x_df$x_OLD), "integer") + upper )
+          x_df <- SparkR::mutate(x_df, xmin = lit(lower), xmax = lit(upper))
  
           if(index > 1) {unioned_x <- unionAll(unioned_x, x_df)}
           else          {unioned_x <- x_df}
@@ -513,8 +509,7 @@ calculate_stats.SparkR <- function(data, layers) {
           if(index > 1) y_df <- filter(y_test, y_test$y_OLD > lower & y_test$y_OLD <= upper)
           else          y_df <- filter(y_test, y_test$y_OLD >= lower & y_test$y_OLD <= upper)
 
-          y_df <- SparkR::mutate(y_df, ymin = cast(isNull(y_df$y_OLD), "integer") + lower,
-                                       ymax = cast(isNull(y_df$y_OLD), "integer") + upper )
+          y_df <- SparkR::mutate(y_df, ymin = lit(lower), ymax = lit(upper))
  
           if(index > 1) {unioned_y <- unionAll(unioned_y, y_df)}
           else          {unioned_y <- y_df}
@@ -564,13 +559,7 @@ calculate_stats.SparkR <- function(data, layers) {
 
         y <- collect(SparkR::arrange(select(y, "y"), "y"))$y
 
-#        if(length(unique(weight)) != 1) {
-#          try_require("quantreg")
-#          stats <- as.numeric(coef(rq(y ~ 1, weights = weight, tau = qs)))
-#        } else {
-          stats <- as.numeric(quantile(y, qs))
-#        }
-
+        stats <- as.numeric(quantile(y, qs))
         names(stats) <- c("ymin", "lower", "middle", "upper", "ymax")
         iqr <- diff(stats[c(2, 4)])
         outliers <- y < (stats[2] - coef * iqr) | y > (stats[4] + coef * iqr)
@@ -582,12 +571,7 @@ calculate_stats.SparkR <- function(data, layers) {
         df <- as.data.frame(as.list(stats))
         
         df$outliers <- I(list(y[outliers]))
-      
-#        if(is.null(weight)) {
-          n <- sum(!is.na(y))
-#        } else {
-#          n <- sum(weight[!is.na(y) & !is.na(weight)])
-#        }
+        n <- sum(!is.na(y))
 
         df$notchupper <- df$middle + 1.58 * iqr / sqrt(n)
         df$notchlower <- df$middle - 1.58 * iqr / sqrt(n)
@@ -605,8 +589,7 @@ calculate_stats.SparkR <- function(data, layers) {
       data <- createDataFrame(sqlContext, test)
       persist(data, "MEMORY_ONLY")
 
-      data <- SparkR::mutate(data, width = data$ymin * 0 + width,
-                                   weight = data$ymin * 0 + 1)
+      data <- SparkR::mutate(data, width = lit(width), weight = lit(1))
 
       return(list(outliers, data))
     },
