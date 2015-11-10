@@ -143,6 +143,13 @@ GeomBar <- proto(Geom, {
 
   required_aes <- c("x")
 
+  reparameterise.SparkR <- function(., df, params) {
+    df <- SparkR::mutate(df, ymin = lit(0), ymax = df$y,
+    			 xmin = df$x - (df$width / 2), xmax = df$x + (df$width / 2))
+  
+    df
+  }
+
   reparameterise <- function(., df, params) {
     df$width <- df$width %||%
       params$width %||% (resolution(df$x, FALSE) * 0.9)

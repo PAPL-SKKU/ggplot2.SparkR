@@ -125,35 +125,37 @@ ggplot_build.SparkR <- function(plot) {
 
   # Apply and map statistics
   data <- calculate_stats.SparkR(panel, data, layers)
-  stop("ggplot_build.SparkR")
-  if(length(data) == 2) {
-     outliers <- data[[1]]
-     data <- data[[2]]
-  } 
+#  stop("ggplot_build.SparkR")
+#  if(length(data) == 2) {
+#     outliers <- data[[1]]
+#     data <- data[[2]]
+#  } 
 
-  data <- map_statistic.SparkR(data, plot)
+#  data <- map_statistic.SparkR(data, plot)
+  data <- dlapply(function(d, p) p$map_statistic.SparkR(d, plot))
 
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
  
-  data <- scales_transform_df.SparkR(scales, data)
-  data <- reparameterise.SparkR(data, plot)
+  data <- lapply(data, scales_transform_df.SparkR, scales = scales)
+  data <- dlapply(function(d, p) p$reparameterise.SparkR(d))
 
   panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
   data <- map_position.SparkR(data)
- 
-  data <- add_group.SparkR(data, add.group, plot)
-  data <- list(collect(data))
 
-  if(!is.null(outliers)) {
-    data[[1]] <- plyr::arrange(data[[1]], x)
-    outliers <- plyr::arrange(outliers, x)
-    data[[1]] <- cbind(data[[1]], outliers = outliers$outliers)
-  }
+#  data <- add_group.SparkR(data, add.group, plot)
+  data <- lapply(data, add_group.SparkR, group = add.group[[1]], plot = plot)
+  data <- lapply(data, collect)
 
-  if(plot$layers[[1]]$geom$objname == "bin2d") {
-    group <- data.frame(group = 1:nrow(data[[1]]))
-    data[[1]] <- cbind(data[[1]], group)
-  }
+#  if(!is.null(outliers)) {
+#    data[[1]] <- plyr::arrange(data[[1]], x)
+#    outliers <- plyr::arrange(outliers, x)
+#    data[[1]] <- cbind(data[[1]], outliers = outliers$outliers)
+#  }
+
+#  if(plot$layers[[1]]$geom$objname == "bin2d") {
+#    group <- data.frame(group = 1:nrow(data[[1]]))
+#    data[[1]] <- cbind(data[[1]], group)
+#  }
 
   npscales <- scales$non_position_scales()
   if (npscales$n() > 0) {

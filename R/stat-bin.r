@@ -84,7 +84,6 @@ StatBin <- proto(Stat, {
 
   calculate.SparkR <- function(., data, binwidth=NULL, origin=NULL, breaks=NULL, width=0.9, 
       drop=FALSE, right=FALSE, ...) {
-
     x_types <- dtypes(select(data, "x"))[[1]]
 
     if (is.null(breaks) && is.null(binwidth) && !(x_types[2] == "int") && !.$informed) {
@@ -112,10 +111,12 @@ bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL
       } else {
         data <- SparkR::arrange(SparkR::count(groupBy(data, "x", "PANEL")), "x")
       }
+
+      data <- SparkR::mutate(data, density = lit(1 / width), ndensity = lit(1),
+    			     ncount = lit(1), width = lit(width), y = data$count)
   } else if(dtypes(x_test)[[1]][2] == "double") {
     if(is.null(range)) range <- as.numeric(collect(select(data, min(data$x), max(data$x))))
     if(is.null(binwidth)) binwidth <- diff(range) / 30
-
     if(is.null(breaks)) {
       if(is.null(origin)) {
         breaks <- fullseq(range, binwidth, pad = TRUE)
@@ -142,34 +143,36 @@ bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL
       if(nrow(filter_df) == 0) {
         zero_filter <- append(zero_filter, index)
       }
-	
+
       filter_df <- SparkR::rename(filter_df, x_bin = filter_df$x)
-      filter_df <- withColumn(filter_df, "x", lit((left[index] + right[index]) / 2))							
-	
+      filter_df <- withColumn(filter_df, "x", lit((left[index] + right[index]) / 2))	
+
       if(index == 1) unioned <- filter_df
       else unioned <- unionAll(unioned, filter_df)
     }
-				
+
     if(length(grep("fill", columns(data)))) {
       data <- SparkR::count(groupBy(unioned, "PANEL", "fill", "x"))
     } else {
       data <- SparkR::count(groupBy(unioned, "PANEL", "x"))
     }
 
-  }
 
-  max_sum_count <- select(data, sum(data$count), max(data$count))
-  max_sum_count <- SparkR::rename(max_sum_count, sum_count = max_sum_count[[1]], max_count = max_sum_count[[2]])
+    max_sum_count <- select(data, sum(data$count), max(data$count))
+    max_sum_count <- SparkR::rename(max_sum_count, sum_count = max_sum_count[[1]],
+  				    max_count = max_sum_count[[2]])
 
-  data <- SparkR::join(data, max_sum_count)
-  data <- SparkR::mutate(data, density = data$count / width[1] / data$sum_count,
-			 ncount = data$count / data$max_count, width = lit(width[1]), y = data$count)
+    data <- SparkR::join(data, max_sum_count)
+    data <- SparkR::mutate(data, density = data$count / width[1] / data$sum_count,
+  			   ncount = data$count / data$max_count,
+  			   width = lit(width[1]), y = data$count)
 						
-  max_density <- select(data, max(abs(data$density)))			
-  max_density <- SparkR::rename(max_density, max_density = max_density[[1]])
+    max_density <- select(data, max(abs(data$density)))			
+    max_density <- SparkR::rename(max_density, max_density = max_density[[1]])
 
-  data <- SparkR::join(data, max_density)
-  data <- withColumn(data, "ndensity", data$density / data$max_density)
+    data <- SparkR::join(data, max_density)
+    data <- withColumn(data, "ndensity", data$density / data$max_density)
+  }
 
   if(length(grep("fill", columns(data)))) {
     data <- select(data, "PANEL", "fill", "x", "count", "density", "ncount", "width", "ndensity")
@@ -178,8 +181,9 @@ bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL
   }
 
   if(dtypes(x_test)[[1]][2] == "double") {
-    remained <- data.frame(PANEL = 1, x = (left[zero_filter] + right[zero_filter]) / 2, count = 0,
-    			   density = 0, ncount = 0, width = width[1], ndensity = 0)
+    remained <- data.frame(PANEL = 1, x = (left[zero_filter] + right[zero_filter]) / 2,
+    			   count = 0, density = 0, ncount = 0, width = width[1],
+			   ndensity = 0)
     remained <- createDataFrame(sqlContext, remained)
 
     data <- unionAll(data, remained)
