@@ -139,12 +139,12 @@ StatBin2d <- proto(Stat, {
     # Determine binwidth, if omitted
     if (is.null(binwidth)) {
       binwidth <- c(NA, NA)
-      if(x_types[[1]][2] == "int") {
+      if(x_types) {
         binwidth[1] <- 1
       } else {
         binwidth[1] <- diff(range[1:2]) / bins
       }
-      if(y_types[[1]][2] == "int") {
+      if(y_types) {
         binwidth[2] <- 1 
       } else {
         binwidth[2] <- diff(range[3:4]) / bins
