@@ -157,7 +157,6 @@ bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL
       data <- SparkR::count(groupBy(unioned, "PANEL", "x"))
     }
 
-
     max_sum_count <- select(data, sum(data$count), max(data$count))
     max_sum_count <- SparkR::rename(max_sum_count, sum_count = max_sum_count[[1]],
   				    max_count = max_sum_count[[2]])
@@ -195,7 +194,8 @@ bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL
   data
 }
 
-bin <- function(x, weight=NULL, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL, width=0.9, drop = FALSE, right = TRUE) {
+bin <- function(x, weight=NULL, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL, width=0.9,
+    drop = FALSE, right = TRUE) {
   if (length(na.omit(x)) == 0) return(data.frame())
   if (is.null(weight))  weight <- rep(1, length(x))
   weight[is.na(weight)] <- 0
