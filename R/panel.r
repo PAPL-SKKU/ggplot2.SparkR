@@ -111,7 +111,6 @@ train_position.SparkR <- function(panel, data, x_scale, y_scale) {
   # Add x, y range in panel$x_scales[[1]]$range & panel$y_scales[[1]]$range
   # continuous: nothing
   # discrete: unique value of column
-
   if(!is.null(x_scale) && length(grep("x", columns(layer_data))) != 0 &&
       is.null(panel$x_scales[[1]]$range$range)) {
     if(panel$x_scales[[1]]$scale_name == "position_d") {
@@ -267,49 +266,20 @@ train_ranges.SparkR <- function(panel, data, plot) {
   panel$layout <- collect(panel$layout)
   x_scale_name <- panel$x_scales[[1]]$scale_name
   y_scale_name <- panel$y_scales[[1]]$scale_name
- 
-  if(x_scale_name == "position_d" && y_scale_name == "position_d") {
 
+  if(x_scale_name == "position_d") {
     panel$x_scales[[1]]$range$range <- collect(SparkR::arrange(panel$x_scales[[1]]$range$range, "x"))[[1]]
-    panel$y_scales[[1]]$range$range <- collect(SparkR::arrange(panel$y_scales[[1]]$range$range, "y"))[[1]]
-
-  } else if(x_scale_name == "position_d" && y_scale_name == "position_c") {
-
-    panel$x_scales[[1]]$range$range <- collect(SparkR::arrange(panel$x_scales[[1]]$range$range, "x"))[[1]]
-
-    if(!is.null(data[[1]]$ymin)) y_min <- min(data[[1]]$ymin)
-    else y_min <- min(data[[1]]$y)
-    
-    if(!is.null(data[[1]]$ymax)) y_max <- max(data[[1]]$ymax)
-    else y_max <- max(data[[1]]$y)
-    
-    panel$y_scales[[1]]$range$range <- c(y_min, y_max)
-
-  } else if(x_scale_name == "position_c" && y_scale_name == "position_d") {
-    
-    if(!is.null(data[[1]]$xmin)) x_min <- min(data[[1]]$xmin)
-    else x_min <- min(data[[1]]$x)
-    
-    if(!is.null(data[[1]]$xmax)) x_max <- max(data[[1]]$xmax)
-    else x_max <- max(data[[1]]$x)
-
+  } else {
+    if(!is.null(data[[1]]$xmin)) x_min <- min(data[[1]]$xmin) else x_min <- min(data[[1]]$x)
+    if(!is.null(data[[1]]$xmax)) x_max <- max(data[[1]]$xmax) else x_max <- max(data[[1]]$x)
     panel$x_scales[[1]]$range$range <- c(x_min, x_max)
+  }
+
+  if(y_scale_name == "position_d") {
     panel$y_scales[[1]]$range$range <- collect(SparkR::arrange(panel$y_scales[[1]]$range$range, "y"))[[1]]
-
-  } else if(x_scale_name == "position_c" && y_scale_name == "position_c") {
-    if(!is.null(data[[1]]$xmin)) x_min <- min(data[[1]]$xmin)
-    else x_min <- min(data[[1]]$x)
-    
-    if(!is.null(data[[1]]$xmax)) x_max <- max(data[[1]]$xmax)
-    else x_max <- max(data[[1]]$x)
-
-    if(!is.null(data[[1]]$ymin)) y_min <- min(data[[1]]$ymin)
-    else y_min <- min(data[[1]]$y)
-    
-    if(!is.null(data[[1]]$ymax)) y_max <- max(data[[1]]$ymax)
-    else y_max <- max(data[[1]]$y)
- 
-    panel$x_scales[[1]]$range$range <- c(x_min, x_max)
+  } else {
+    if(!is.null(data[[1]]$ymin)) y_min <- min(data[[1]]$ymin) else y_min <- min(data[[1]]$y)
+    if(!is.null(data[[1]]$ymax)) y_max <- max(data[[1]]$ymax) else y_max <- max(data[[1]]$y)
     panel$y_scales[[1]]$range$range <- c(y_min, y_max)
   }
 
