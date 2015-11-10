@@ -125,11 +125,10 @@ ggplot_build.SparkR <- function(plot) {
 
   # Apply and map statistics
   data <- calculate_stats.SparkR(panel, data, layers)
-#  stop("ggplot_build.SparkR")
-#  if(length(data) == 2) {
-#     outliers <- data[[1]]
-#     data <- data[[2]]
-#  } 
+  if(length(data[[1]]) == 2) {
+     outliers <- data[[1]][[1]]
+     data[[1]] <- data[[1]][[2]]
+  } 
   data <- dlapply(function(d, p) p$map_statistic.SparkR(d, plot))
 
   # Make sure missing (but required) aesthetics are added
@@ -149,12 +148,14 @@ ggplot_build.SparkR <- function(plot) {
   data <- lapply(data, add_group.SparkR, group = add.group[[1]], plot = plot)
   data <- lapply(data, collect)
 
-#  if(!is.null(outliers)) {
-#    data[[1]] <- plyr::arrange(data[[1]], x)
-#    outliers <- plyr::arrange(outliers, x)
-#    data[[1]] <- cbind(data[[1]], outliers = outliers$outliers)
-#  }
+  # (TODO) Need to delete this if function
+  if(!is.null(outliers)) {
+    data[[1]] <- arrange(data[[1]], x)
+    outliers <- arrange(outliers, x)
+    data[[1]] <- cbind(data[[1]], outliers = outliers$outliers)
+  }
 
+  # (TODO) Need to delete this if function
   if(plot$layers[[1]]$geom$objname == "bin2d") {
     group <- data.frame(group = 1:nrow(data[[1]]))
     data[[1]] <- cbind(data[[1]], group)

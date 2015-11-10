@@ -262,11 +262,12 @@ train_ranges <- function(panel, coord) {
   panel
 }
 
+# Compute ranges and dimensions of each panel.
 train_ranges.SparkR <- function(panel, data, plot) {
   panel$layout <- collect(panel$layout)
   x_scale_name <- panel$x_scales[[1]]$scale_name
   y_scale_name <- panel$y_scales[[1]]$scale_name
-  
+ 
   if(x_scale_name == "position_d" && y_scale_name == "position_d") {
 
     panel$x_scales[[1]]$range$range <- collect(SparkR::arrange(panel$x_scales[[1]]$range$range, "x"))[[1]]
@@ -332,6 +333,10 @@ calculate_stats <- function(panel, data, layers) {
   })
 }
 
+# Calculate statistics using Spark
+#
+# @param layers list of layers
+# @param data a list of DataFrame (one for each layer)
 calculate_stats.SparkR <- function(panel, data, layers) {
   lapply(seq_along(data), function(i) {
     d <- data[[i]]
@@ -339,78 +344,6 @@ calculate_stats.SparkR <- function(panel, data, layers) {
 
     l$calc_statistic(d, NULL)
   })
-}
-
-calculate_stats.SparkR_test <- function(data, layers) {
-  stat_type <- layers[[1]]$stat$objname
-  sqlContext <- get("sqlContext", envir = .GlobalEnv)
-
-  switch(stat_type, 
-    boxplot = {
-      qs <- c(0, 0.25, 0.5, 0.75, 1)
-      coef_null <- layers[[1]]$stat_params$coef
-      width_null <- layers[[1]]$stat_params$width
-
-      coef <- if(is.null(coef_null)) 1.5 else coef_null
-      width <- if(is.null(width_null)) 0.75 else width_null
-
-      column_fill <- length(grep("fill", columns(data)))
-
-      if(column_fill) {
-        distinct_data <- collect(distinct(select(data, "x", "PANEL", "fill")))
-      } else {
-        distinct_data <- collect(distinct(select(data, "x", "PANEL")))
-      }
-     
-      for(i in 1:nrow(distinct_data)) {
-        if(column_fill) {
-          y <- SparkR::filter(data, data$x == distinct_data$x[i] &
-                                    data$PANEL == distinct_data$PANEL[i] &
-                                    data$fill == distinct_data$fill[i])
-        } else {
-          y <- SparkR::filter(data, data$x == distinct_data$x[i] & 
-                                    data$PANEL == distinct_data$PANEL[i])
-        }
-
-        y <- collect(SparkR::arrange(select(y, "y"), "y"))$y
-
-        stats <- as.numeric(quantile(y, qs))
-        names(stats) <- c("ymin", "lower", "middle", "upper", "ymax")
-        iqr <- diff(stats[c(2, 4)])
-        outliers <- y < (stats[2] - coef * iqr) | y > (stats[4] + coef * iqr)
-
-        if(any(outliers)) {
-          stats[c(1, 5)] <- range(c(stats[2:4], y[!outliers]), na.rm = TRUE)
-        }
-
-        df <- as.data.frame(as.list(stats))
-        
-        df$outliers <- I(list(y[outliers]))
-        n <- sum(!is.na(y))
-
-        df$notchupper <- df$middle + 1.58 * iqr / sqrt(n)
-        df$notchlower <- df$middle - 1.58 * iqr / sqrt(n)
-        df$relvarwidth <- sqrt(n)
-
-        distinct <- cbind(distinct_data[i, ], df)
-
-        if(i > 1) test <- rbind(test, distinct)
-        else test <- distinct
-      }
-
-      outliers <- test[c("x", "outliers")]
-      test$outliers <- NULL
-
-      data <- createDataFrame(sqlContext, test)
-      persist(data, "MEMORY_ONLY")
-
-      data <- SparkR::mutate(data, width = lit(width), weight = lit(1))
-
-      return(list(outliers, data))
-    }
-  )
-
-  data
 }
 
 xlabel <- function(panel, labels) {

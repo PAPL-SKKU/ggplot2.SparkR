@@ -157,6 +157,19 @@ GeomBoxplot <- proto(Geom, {
     df
   }
 
+  reparameterise.SparkR <- function(., df, params) {
+    # if `varwidth` not requested or not available, don't use it
+    if(is.null(params) || is.null(params$varwidth) ||
+      !params$varwidth || length(grep("relvarwidth", columns(data))) == 0) {
+      SparkR::mutate(df, xmin = df$x - df$width / 2, xmax = df$x + df$width / 2)
+    } else {
+      # make `relvarwidth` relative to the size of the largest group
+      max_relvarwidth <- collect(select(df, max(df$relvarwidth)))[[1]]
+      SparkR::mutate(df, xmin = df$x - (df$relvarwidth * df$width) / (2 * max_relvarwidth),
+                     xmax = df$x + (df$relvarwidth * df$width) / (2 * max_relvarwidth))
+    }
+  }
+
   draw <- function(., data, ..., fatten = 2, outlier.colour = NULL, outlier.shape = NULL, outlier.size = 2,
                    notch = FALSE, notchwidth = .5, varwidth = FALSE) {
     common <- data.frame(
