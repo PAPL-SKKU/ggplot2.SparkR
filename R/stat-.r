@@ -50,12 +50,13 @@ Stat <- proto(TopLevel, expr={
 
       do.call(rbind.fill, stats)
     } else {
-      stats <- .$calculate.SparkR(data = data, ...)
-
-      stats
+      .$calculate.SparkR(data = data, ...)
     }
   }
 
+  calculate_groups.SparkR <- function(., data, scales, ...) {
+    .$calculate.SparkR(data = data, ...)
+  }
 
   pprint <- function(., newline=TRUE) {
     cat("stat_", .$objname ,": ", sep="") # , clist(.$parameters())

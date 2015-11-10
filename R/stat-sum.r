@@ -46,6 +46,20 @@ StatSum <- proto(Stat, {
   required_aes <- c("x", "y")
   default_geom <- function(.) GeomPoint
 
+  calculate_groups.SparkR <- function(., data, scales, ...) {
+    if(length(grep("fill", columns(data)))) {
+      counts <- SparkR::count(groupBy(data, "PANEL", "x", "y", "fill"))
+    } else {
+      counts <- SparkR::count(groupBy(data, "PANEL", "x", "y"))
+    }
+
+    counts <- SparkR::rename(counts, n = counts$count)
+    counts <- withColumn(counts, "prop", counts$n^(-1))
+    counts <- select(counts, "PANEL", "x", "y", "n", "prop")
+
+    counts
+  }
+
   calculate_groups <- function(., data, scales, ...) {
 
     if (is.null(data$weight)) data$weight <- 1

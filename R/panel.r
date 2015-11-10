@@ -186,7 +186,7 @@ map_position.SparkR <- function(data) {
         layer_data <- withColumnRenamed(layer_data, "x", "x_old")
         
 	disc_x <- bindIDs(SparkR::arrange(distinct(select(layer_data, "x_old")), "x_old"))
-        disc_x <- withColumn(disc_x, "x", cast(disc_x$"_2", "integer"))
+        disc_x <- withColumn(disc_x, "x", cast(disc_x$"_2", "int"))
         
 	layer_data <- SparkR::join(layer_data, disc_x, layer_data$x_old == disc_x$"_1", "inner")
         layer_data <- select(layer_data, as.list(column_list))
@@ -202,7 +202,7 @@ map_position.SparkR <- function(data) {
         layer_data <- withColumnRenamed(layer_data, "y", "y_old")
         
 	disc_y <- bindIDs(SparkR::arrange(distinct(select(layer_data, "y_old")), "y_old"))
-        disc_y <- withColumn(disc_y, "y", cast(disc_y$"_2", "integer"))
+        disc_y <- withColumn(disc_y, "y", cast(disc_y$"_2", "int"))
         
 	layer_data <- SparkR::join(layer_data, disc_y, layer_data$y_old == disc_y$"_1", "inner")
         layer_data <- select(layer_data, as.list(column_list))
@@ -407,16 +407,6 @@ calculate_stats.SparkR_test <- function(data, layers) {
       data <- SparkR::mutate(data, width = lit(width), weight = lit(1))
 
       return(list(outliers, data))
-    },
-    sum = {
-      if(length(grep("fill", columns(data))))
-        data <- SparkR::count(groupBy(data, "PANEL", "x", "y", "fill"))
-      else
-        data <- SparkR::count(groupBy(data, "PANEL", "x", "y"))
-
-      data <- SparkR::rename(data, n = data$count)
-      data <- withColumn(data, "prop", data$n^(-1))
-      data <- select(data, "PANEL", "x", "y", "n", "prop")
     }
   )
 

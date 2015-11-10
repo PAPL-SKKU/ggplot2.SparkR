@@ -130,19 +130,22 @@ ggplot_build.SparkR <- function(plot) {
 #     outliers <- data[[1]]
 #     data <- data[[2]]
 #  } 
-
-#  data <- map_statistic.SparkR(data, plot)
   data <- dlapply(function(d, p) p$map_statistic.SparkR(d, plot))
 
+  # Make sure missing (but required) aesthetics are added
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
  
   data <- lapply(data, scales_transform_df.SparkR, scales = scales)
+  
+  # Reparameterise geoms from (e.g.) y and width to ymin and ymax
   data <- dlapply(function(d, p) p$reparameterise.SparkR(d))
 
+  # Re-train and map.  This ensures that facets have control 
+  # over the range of a plot: is it generated from what's
+  # displayed, or does it include the range of underlying data
   panel <- train_position.SparkR(panel, data, scale_x(), scale_y())
   data <- map_position.SparkR(data)
 
-#  data <- add_group.SparkR(data, add.group, plot)
   data <- lapply(data, add_group.SparkR, group = add.group[[1]], plot = plot)
   data <- lapply(data, collect)
 
@@ -152,11 +155,12 @@ ggplot_build.SparkR <- function(plot) {
 #    data[[1]] <- cbind(data[[1]], outliers = outliers$outliers)
 #  }
 
-#  if(plot$layers[[1]]$geom$objname == "bin2d") {
-#    group <- data.frame(group = 1:nrow(data[[1]]))
-#    data[[1]] <- cbind(data[[1]], group)
-#  }
+  if(plot$layers[[1]]$geom$objname == "bin2d") {
+    group <- data.frame(group = 1:nrow(data[[1]]))
+    data[[1]] <- cbind(data[[1]], group)
+  }
 
+  # Train and map non-position scales
   npscales <- scales$non_position_scales()
   if (npscales$n() > 0) {
     lapply(data, scales_train_df, scales = npscales)
@@ -166,6 +170,7 @@ ggplot_build.SparkR <- function(plot) {
   # Apply position adjustments
   data <- dlapply(function(d, p) p$adjust_position(d))
 
+  # Train coordinate system
   panel <- train_ranges.SparkR(panel, data, plot)
 
   list(data = data, panel = panel, plot = plot)

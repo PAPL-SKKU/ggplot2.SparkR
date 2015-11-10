@@ -361,17 +361,6 @@ reparameterise.SparkR <- function(data, plot) {
   objname <- plot$layers[[1]]$geom$objname
 
   switch(objname,
-    histogram = {
-      data <- SparkR::mutate(data, ymin = data$y * 0, ymax = data$y,
-                                   xmin = data$x - (data$width / 2), xmax = data$x + (data$width / 2))
-
-      if(length(grep("fill", columns(data))) == 0)
-        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density", "width",
-                             "PANEL", "ymin", "ymax", "xmin", "xmax")
-      else
-        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density", "fill", "width",
-                             "PANEL", "ymin", "ymax", "xmin", "xmax")
-    },
     boxplot = {
       params <- plot$layers[[1]]$geom_params
  

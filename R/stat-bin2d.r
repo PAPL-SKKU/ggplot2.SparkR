@@ -113,4 +113,112 @@ StatBin2d <- proto(Stat, {
       density <- count / sum(count, na.rm = TRUE)
     })
   }
+
+  calculate.SparkR <- function(., data, scales, binwidth = NULL, bins = 30, breaks = NULL,
+      origin = NULL, drop = TRUE, ...) {
+    x_test <- select(data, "x")
+    y_test <- select(data, "y")
+    
+    x_types <- unlist(dtypes(x_test))[2] == "int"
+    y_types <- unlist(dtypes(y_test))[2] == "int"
+
+    range <- as.numeric(collect(select(data, min(data$x), max(data$x), min(data$y), max(data$y))))
+
+    # Determine origin, if omitted
+    if (is.null(origin)) {
+      origin <- c(NA, NA)
+    } else {
+      stopifnot(is.numeric(origin))
+      stopifnot(length(origin) == 2)
+    }
+
+    originf <- function(x, value) if (x) -0.5 else value
+    if (is.na(origin[1])) origin[1] <- originf(x_types, range[1])
+    if (is.na(origin[2])) origin[2] <- originf(y_types, range[3])
+
+    # Determine binwidth, if omitted
+    if (is.null(binwidth)) {
+      binwidth <- c(NA, NA)
+      if(x_types[[1]][2] == "int") {
+        binwidth[1] <- 1
+      } else {
+        binwidth[1] <- diff(range[1:2]) / bins
+      }
+      if(y_types[[1]][2] == "int") {
+        binwidth[2] <- 1 
+      } else {
+        binwidth[2] <- diff(range[3:4]) / bins
+      }
+    }
+   
+    stopifnot(is.numeric(binwidth))
+    stopifnot(length(binwidth) == 2)
+    
+    # Determine breaks, if omitted
+    if (is.null(breaks)) {
+      breaks <- list(
+        x = seq(origin[1], range[2] + binwidth[1], binwidth[1]),
+        y = seq(origin[2], range[4] + binwidth[2], binwidth[2])
+      )
+    } else {
+      stopifnot(is.list(breaks))
+      stopifnot(length(breaks) == 2)
+      stopifnot(all(sapply(breaks, is.numeric)))
+    }
+    
+    x_test <- withColumnRenamed(x_test, "x", "x_OLD")
+    y_test <- withColumnRenamed(y_test, "y", "y_OLD")
+    
+    if(x_types == TRUE & y_types == TRUE) {
+      data <- SparkR::mutate(data, xmin = data$x - 0.5, xmax = data$x + 0.5,
+      			     ymin = data$y - 0.5, ymax = data$y + 0.5)
+    } else if(x_types == TRUE) {
+      unioned <- distinct(bin2d.SparkR(y_test, breaks$y, "y"))
+      
+      data <- SparkR::join(data, unioned, data$y == unioned$y_OLD, "inner")
+      data <- SparkR::mutate(data, xmin = data$x - 0.5, xmax = data$x + 0.5)
+    } else if(y_types == TRUE) {
+      unioned <- distinct(bin2d.SparkR(x_test, breaks$x, "x"))
+
+      data <- SparkR::join(data, unioned, data$x == unioned$x_OLD, "inner")
+      data <- SparkR::mutate(data, ymin = data$y - 0.5, ymax = data$y + 0.5)
+    } else {
+      unioned_x <- distinct(bin2d.SparkR(x_test, breaks$x, "x"))
+      unioned_y <- distinct(bin2d.SparkR(y_test, breaks$y, "y"))
+      
+      data <- SparkR::join(data, unioned_x, data$x == unioned_x$x_OLD, "inner")
+      data <- SparkR::join(data, unioned_y, data$y == unioned_y$y_OLD, "inner")
+    }
+    
+    data <- select(data, "x", "y", "PANEL", "xmin", "xmax", "ymin", "ymax")
+    data <- SparkR::count(groupBy(data, "PANEL", "xmin", "xmax", "ymin", "ymax"))
+    
+    sum_count <- select(data, sum(data$count))
+    sum_count <- SparkR::rename(sum_count, sum_count = sum_count[[1]])
+    
+    data <- SparkR::join(data, sum_count)
+    data <- withColumn(data, "density", data$count / data$sum_count)
+  }
+
+  bin2d.SparkR <- function(df, breaks, name) {
+    col <- paste0(name, "_OLD")
+
+    for(index in 1:(length(breaks)-1)) {
+      lower <- breaks[index]
+      upper <- breaks[index + 1]
+
+      if(index > 1) {
+        counts <- filter(df, df[[col]] > lower & df[[col]] <= upper)
+      } else {
+        counts <- filter(df, df[[col]] >= lower & df[[col]] <= upper)
+      }
+
+      counts <- withColumn(counts, paste0(name, "min"), lit(lower))
+      counts <- withColumn(counts, paste0(name, "max"), lit(upper))
+
+      if(index > 1) unioned <- unionAll(unioned, counts) else unioned <- counts
+    } 
+
+    unioned
+  }
 })
