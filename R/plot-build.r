@@ -112,7 +112,7 @@ ggplot_build.SparkR <- function(plot) {
 
   # Compute aesthetics to produce data with generalised variable names
   data <- dlapply(function(d, p) p$compute_aesthetics.SparkR(d, plot))
-  add.group <- lapply(data, make_group.SparkR)
+  add.group <- lapply(data, make_group.SparkR, plot = plot)
 
   # Transform all scales
   data <- lapply(data, scales_transform_df.SparkR, scales = scales)
@@ -167,7 +167,7 @@ ggplot_build.SparkR <- function(plot) {
     lapply(data, scales_train_df, scales = npscales)
     data <- lapply(data, scales_map_df, scales = npscales)
   }
- 
+
   # Apply position adjustments
   data <- dlapply(function(d, p) p$adjust_position(d))
 

@@ -190,8 +190,17 @@ StatBin2d <- proto(Stat, {
       data <- SparkR::join(data, unioned_y, data$y == unioned_y$y_OLD, "inner")
     }
 
-    data <- select(data, "x", "y", "PANEL", "xmin", "xmax", "ymin", "ymax")
-    data <- SparkR::count(groupBy(data, "PANEL", "xmin", "xmax", "ymin", "ymax"))
+    basic <- c("x", "y", "PANEL", "xmin", "xmax", "ymin", "ymax")
+    if(length(grep("fill", columns(data)))) {
+      data <- select(data, as.list(append(basic, "fill")))
+      data <- SparkR::count(groupBy(data, "PANEL", "xmin", "xmax", "ymin", "ymax", "fill"))
+    } else if(length(grep("colour", columns(data)))) {
+      data <- select(data, as.list(append(basic, "colour")))
+      data <- SparkR::count(groupBy(data, "PANEL", "xmin", "xmax", "ymin", "ymax", "colour"))
+    } else {
+      data <- select(data, as.list(basic))
+      data <- SparkR::count(groupBy(data, "PANEL", "xmin", "xmax", "ymin", "ymax"))
+    }
 
     sum_count <- select(data, sum(data$count))
     sum_count <- SparkR::rename(sum_count, sum_count = sum_count[[1]])

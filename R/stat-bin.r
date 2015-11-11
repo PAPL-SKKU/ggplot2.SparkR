@@ -108,9 +108,11 @@ bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL
 
   if(dtypes(x_test)[[1]][2] == "int") {
       if(length(grep("fill", columns(data)))) {
-        data <- SparkR::arrange(SparkR::count(groupBy(data, "x", "PANEL", "fill")), "x", "fill")
+        data <- SparkR::count(groupBy(data, "x", "PANEL", "fill"))
+      } else if(length(grep("colour", columns(data)))) {
+        data <- SparkR::count(groupBy(data, "x", "PANEL", "colour"))
       } else {
-        data <- SparkR::arrange(SparkR::count(groupBy(data, "x", "PANEL")), "x")
+        data <- SparkR::count(groupBy(data, "x", "PANEL"))
       }
 
       data <- SparkR::mutate(data, density = lit(1 / width), ndensity = lit(1),
@@ -154,6 +156,8 @@ bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL
 
     if(length(grep("fill", columns(data)))) {
       data <- SparkR::count(groupBy(unioned, "PANEL", "fill", "x"))
+    } else if(length(grep("colour", columns(data)))){
+      data <- SparkR::count(groupBy(unioned, "PANEL", "colour", "x"))
     } else {
       data <- SparkR::count(groupBy(unioned, "PANEL", "x"))
     }
@@ -174,10 +178,13 @@ bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL
     data <- withColumn(data, "ndensity", data$density / data$max_density)
   }
 
+  basic <- c("PANEL", "x", "count", "density", "ncount", "width", "ndensity")
   if(length(grep("fill", columns(data)))) {
-    data <- select(data, "PANEL", "fill", "x", "count", "density", "ncount", "width", "ndensity")
+    data <- select(data, as.list(append(basic, "fill")))
+  } else if(length(grep("colour", columns(data)))) {
+    data <- select(data, as.list(append(basic, "colour")))
   } else {
-    data <- select(data, "PANEL", "x", "count", "density", "ncount", "width", "ndensity")
+    data <- select(data, as.list(basic))
   }
 
   if(dtypes(x_test)[[1]][2] == "double") {

@@ -138,7 +138,7 @@ StatBoxplot <- proto(Stat, {
     data <- createDataFrame(sqlContext, box)
     persist(data, "MEMORY_ONLY")
     data <- SparkR::mutate(data, width = lit(width), weight = lit(1))
- 
+
     list(outliers, data)
   }
 })
