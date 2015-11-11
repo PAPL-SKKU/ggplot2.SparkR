@@ -93,7 +93,9 @@ is.ggplot <- function(x) inherits(x, "ggplot")
 #' @method ggplot data.frame
 #' @export
 ggplot.data.frame <- function(data, mapping=aes(), ..., environment = parent.frame()) {
-  if (!missing(mapping) && !inherits(mapping, "uneval")) stop("Mapping should be created with aes or aes_string")
+  if (!missing(mapping) && !inherits(mapping, "uneval")) {
+    stop("Mapping should be created with aes or aes_string")
+  }
 
   p <- structure(list(
     data = data,
@@ -122,7 +124,10 @@ ggplot.data.frame <- function(data, mapping=aes(), ..., environment = parent.fra
 #' @method ggplot DataFrame
 #' @export
 ggplot.DataFrame <- function(data, mapping=aes(), ..., environment = parent.frame()) {
-  if (!missing(mapping) && !inherits(mapping, "uneval")) stop("Mapping should be created with aes or aes_string")
+  if (!missing(mapping) && !inherits(mapping, "uneval")) {
+    stop("Mapping should be created with aes or aes_string")
+  }
+
   p <- structure(list(
     data = data,
     layers = list(),
@@ -133,8 +138,9 @@ ggplot.DataFrame <- function(data, mapping=aes(), ..., environment = parent.fram
     facet = facet_null(),
     plot_env = environment
   ), class = c("gg", "ggplot.SparkR", "ggplot"))
-  
+ 
   p$labels <- make_labels(mapping)
+
   set_last_plot(p)
   p
 }

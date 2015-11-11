@@ -32,11 +32,12 @@ Layer <- proto(expr = {
       show_guide = FALSE
     }
 
-
     if (is.null(geom) && is.null(stat)) stop("Need at least one of stat and geom")
 
     data <- fortify(data)
-    if (!is.null(mapping) && !inherits(mapping, "uneval")) stop("Mapping should be a list of unevaluated mappings created by aes or aes_string")
+    if (!is.null(mapping) && !inherits(mapping, "uneval")) {
+      stop("Mapping should be a list of unevaluated mappings created by aes or aes_string")
+    }
 
     if (is.character(geom)) geom <- Geom$find(geom)
     if (is.character(stat)) stat <- Stat$find(stat)
@@ -137,7 +138,7 @@ Layer <- proto(expr = {
 
     for(index in 1:length(keys)) {
       if(keys[index] == "group") keys[index] <- "grouped"
-      data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
+      data <- withColumnRenamed(data, values[index], keys[index])
     }
 
     if(!is.null(.$geom_params$group)) {
@@ -145,10 +146,10 @@ Layer <- proto(expr = {
     }
 
     scales_add_defaults(plot$scales, data, aesthetics, plot$plot_env)
-    
+ 
     data
   }
-  
+ 
   compute_aesthetics <- function(., data, plot) {
     aesthetics <- .$layer_mapping(plot$mapping)
 
@@ -186,7 +187,6 @@ Layer <- proto(expr = {
     data.frame(evaled)
   }
 
-
   calc_statistic <- function(., data, scales) {
     if (empty(data)) return(data.frame())
 
@@ -211,7 +211,7 @@ Layer <- proto(expr = {
         stop("Maybe something wrong in calcaulate_groups.", call. = FALSE)
       }
     }
-      
+ 
     res
   }
 
@@ -249,7 +249,7 @@ Layer <- proto(expr = {
     aesthetics <- compact(aesthetics)
 
     new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
-    
+ 
     if (length(new) == 0) return(data)
 
     # Add map stat output to aesthetics

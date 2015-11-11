@@ -42,10 +42,7 @@ Stat <- proto(TopLevel, expr={
         if (empty(new)) return(data.frame())
         unique <- uniquecols(old)
         missing <- !(names(unique) %in% names(new))
-        cbind(
-          new,
-          unique[rep(1, nrow(new)), missing,drop=FALSE]
-        )
+        cbind(new, unique[rep(1, nrow(new)), missing,drop=FALSE])
       }, stats, groups, SIMPLIFY=FALSE)
 
       do.call(rbind.fill, stats)
@@ -73,5 +70,4 @@ Stat <- proto(TopLevel, expr={
   new <- function(., mapping=aes(), data=NULL, geom=NULL, position=NULL, ...){
     do.call("layer", list(mapping=mapping, data=data, geom=geom, stat=., position=position, ...))
   }
-
 })

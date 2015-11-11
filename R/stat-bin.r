@@ -71,15 +71,17 @@ StatBin <- proto(Stat, {
     .super$calculate_groups(., data, ...)
   }
 
-  calculate <- function(., data, scales, binwidth=NULL, origin=NULL, breaks=NULL, width=0.9, drop = FALSE, right = FALSE, ...) {
+  calculate <- function(., data, scales, binwidth=NULL, origin=NULL, breaks=NULL, width=0.9,
+      drop = FALSE, right = FALSE, ...) {
     range <- scale_dimension(scales$x, c(0, 0))
-    
+
     if (is.null(breaks) && is.null(binwidth) && !is.integer(data$x) && !.$informed) {
       message("stat_bin: binwidth defaulted to range/30. Use 'binwidth = x' to adjust this.")
       .$informed <- TRUE
     }
 
-    bin(data$x, data$weight, binwidth=binwidth, origin=origin, breaks=breaks, range=range, width=width, drop = drop, right = right)
+    bin(data$x, data$weight, binwidth=binwidth, origin=origin, breaks=breaks, range=range,
+      width=width, drop = drop, right = right)
   }
 
   calculate.SparkR <- function(., data, binwidth=NULL, origin=NULL, breaks=NULL, width=0.9, 
@@ -98,7 +100,6 @@ StatBin <- proto(Stat, {
   default_aes <- function(.) aes(y = ..count..)
   required_aes <- c("x")
   default_geom <- function(.) GeomBar
-
 })
 
 bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL, width=0.9,
@@ -165,8 +166,8 @@ bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL
     data <- SparkR::mutate(data, density = data$count / width[1] / data$sum_count,
   			   ncount = data$count / data$max_count,
   			   width = lit(width[1]), y = data$count)
-						
-    max_density <- select(data, max(abs(data$density)))			
+
+    max_density <- select(data, max(abs(data$density)))
     max_density <- SparkR::rename(max_density, max_density = max_density[[1]])
 
     data <- SparkR::join(data, max_density)
@@ -190,6 +191,8 @@ bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL
 
   data <- SparkR::arrange(data, "x")
   persist(data, "MEMORY_ONLY")
+
+  if (drop) data <- filter(data, data$count > 0)
 
   data
 }
@@ -239,18 +242,18 @@ bin <- function(x, weight=NULL, binwidth=NULL, origin=NULL, breaks=NULL, range=N
     x = x,
     width = width
   )
-  
+ 
   if (sum(results$count, na.rm = TRUE) == 0) {
     return(results)
   }
-  
+
   res <- within(results, {
     count[is.na(count)] <- 0
     density <- count / width / sum(abs(count), na.rm=TRUE)
     ncount <- count / max(abs(count), na.rm=TRUE)
     ndensity <- density / max(abs(density), na.rm=TRUE)
   })
-  
+ 
   if (drop) res <- subset(res, count > 0)
  
   res

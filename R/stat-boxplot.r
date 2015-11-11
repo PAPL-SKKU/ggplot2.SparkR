@@ -90,13 +90,13 @@ StatBoxplot <- proto(Stat, {
   calculate.SparkR <- function(., data, scales, width=NULL, na.rm=FALSE, coef=1.5, ...) {
     qs <- c(0, 0.25, 0.5, 0.75, 1)
     column_fill <- length(grep("fill", columns(data)))
-    
+
     if(column_fill) {
       distinct_data <- collect(distinct(select(data, "x", "PANEL", "fill")))
     } else {
       distinct_data <- collect(distinct(select(data, "x", "PANEL")))
     }
-    
+
     for(i in 1:nrow(distinct_data)) {
       if(column_fill) {
         y <- SparkR::filter(data, data$x == distinct_data$x[i] &
@@ -106,35 +106,35 @@ StatBoxplot <- proto(Stat, {
         y <- SparkR::filter(data, data$x == distinct_data$x[i] & 
 			    data$PANEL == distinct_data$PANEL[i])
       }
-      
+
       y <- collect(SparkR::arrange(select(y, "y"), "y"))$y
       stats <- as.numeric(quantile(y, qs))
       names(stats) <- c("ymin", "lower", "middle", "upper", "ymax")
-      
+
       iqr <- diff(stats[c(2, 4)])
       outliers <- y < (stats[2] - coef * iqr) | y > (stats[4] + coef * iqr)
-      
+
       if(any(outliers)) {
         stats[c(1, 5)] <- range(c(stats[2:4], y[!outliers]), na.rm = TRUE)
       }
-      
+
       df <- as.data.frame(as.list(stats))
       df$outliers <- I(list(y[outliers]))
-      
+
       n <- sum(!is.na(y))
-      
+
       df$notchupper <- df$middle + 1.58 * iqr / sqrt(n)
       df$notchlower <- df$middle - 1.58 * iqr / sqrt(n)
       df$relvarwidth <- sqrt(n)
-      
+
       distinct <- cbind(distinct_data[i, ], df)
-      
+
       if(i > 1) box <- rbind(box, distinct) else box <- distinct
     }
-    
+
     outliers <- box[c("x", "outliers")]
     box$outliers <- NULL
-    
+
     data <- createDataFrame(sqlContext, box)
     persist(data, "MEMORY_ONLY")
     data <- SparkR::mutate(data, width = lit(width), weight = lit(1))

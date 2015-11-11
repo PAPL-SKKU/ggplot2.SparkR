@@ -31,7 +31,6 @@
 #' }
 stat_bin2d <- function (mapping = NULL, data = NULL, geom = NULL, position = "identity",
 bins = 30, drop = TRUE, ...) {
-
   StatBin2d$new(mapping = mapping, data = data, geom = geom, position = position,
   bins = bins, drop = drop, ...)
 }
@@ -43,7 +42,8 @@ StatBin2d <- proto(Stat, {
   required_aes <- c("x", "y")
   default_geom <- function(.) GeomRect
 
-  calculate <- function(., data, scales, binwidth = NULL, bins = 30, breaks = NULL, origin = NULL, drop = TRUE, ...) {
+  calculate <- function(., data, scales, binwidth = NULL, bins = 30, breaks = NULL,
+      origin = NULL, drop = TRUE, ...) {
     range <- list(
       x = scale_dimension(scales$x, c(0, 0)),
       y = scale_dimension(scales$y, c(0, 0))
@@ -75,7 +75,7 @@ StatBin2d <- proto(Stat, {
         binwidth[2] <- diff(range$y) / bins
       }
     }
-    
+ 
     stopifnot(is.numeric(binwidth))
     stopifnot(length(binwidth) == 2)
 
@@ -100,12 +100,12 @@ StatBin2d <- proto(Stat, {
     counts <- as.data.frame(
       xtabs(weight ~ xbin + ybin, data), responseName = "count")
     if (drop) counts <- subset(counts, count > 0)
-    
+
     within(counts,{
       xint <- as.numeric(xbin)
       xmin <- breaks$x[xint]
       xmax <- breaks$x[xint + 1]
-      
+
       yint <- as.numeric(ybin)
       ymin <- breaks$y[yint]
       ymax <- breaks$y[yint + 1]
@@ -118,7 +118,7 @@ StatBin2d <- proto(Stat, {
       origin = NULL, drop = TRUE, ...) {
     x_test <- select(data, "x")
     y_test <- select(data, "y")
-    
+
     x_types <- unlist(dtypes(x_test))[2] == "int"
     y_types <- unlist(dtypes(y_test))[2] == "int"
 
@@ -150,10 +150,10 @@ StatBin2d <- proto(Stat, {
         binwidth[2] <- diff(range[3:4]) / bins
       }
     }
-   
+
     stopifnot(is.numeric(binwidth))
     stopifnot(length(binwidth) == 2)
-    
+
     # Determine breaks, if omitted
     if (is.null(breaks)) {
       breaks <- list(
@@ -165,16 +165,16 @@ StatBin2d <- proto(Stat, {
       stopifnot(length(breaks) == 2)
       stopifnot(all(sapply(breaks, is.numeric)))
     }
-    
+
     x_test <- withColumnRenamed(x_test, "x", "x_OLD")
     y_test <- withColumnRenamed(y_test, "y", "y_OLD")
-    
+
     if(x_types == TRUE & y_types == TRUE) {
       data <- SparkR::mutate(data, xmin = data$x - 0.5, xmax = data$x + 0.5,
       			     ymin = data$y - 0.5, ymax = data$y + 0.5)
     } else if(x_types == TRUE) {
       unioned <- distinct(bin2d.SparkR(y_test, breaks$y, "y"))
-      
+
       data <- SparkR::join(data, unioned, data$y == unioned$y_OLD, "inner")
       data <- SparkR::mutate(data, xmin = data$x - 0.5, xmax = data$x + 0.5)
     } else if(y_types == TRUE) {
@@ -185,17 +185,17 @@ StatBin2d <- proto(Stat, {
     } else {
       unioned_x <- distinct(bin2d.SparkR(x_test, breaks$x, "x"))
       unioned_y <- distinct(bin2d.SparkR(y_test, breaks$y, "y"))
-      
+
       data <- SparkR::join(data, unioned_x, data$x == unioned_x$x_OLD, "inner")
       data <- SparkR::join(data, unioned_y, data$y == unioned_y$y_OLD, "inner")
     }
-    
+
     data <- select(data, "x", "y", "PANEL", "xmin", "xmax", "ymin", "ymax")
     data <- SparkR::count(groupBy(data, "PANEL", "xmin", "xmax", "ymin", "ymax"))
-    
+
     sum_count <- select(data, sum(data$count))
     sum_count <- SparkR::rename(sum_count, sum_count = sum_count[[1]])
-    
+
     data <- SparkR::join(data, sum_count)
     data <- withColumn(data, "density", data$count / data$sum_count)
   }
@@ -218,7 +218,6 @@ StatBin2d <- proto(Stat, {
 
       if(index > 1) unioned <- unionAll(unioned, counts) else unioned <- counts
     } 
-
     unioned
   }
 })

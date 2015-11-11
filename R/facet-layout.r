@@ -134,7 +134,8 @@ layout_wrap <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = 
   panels
 }
 
-layout_wrap.SparkR <- function(data, vars = NULL, nrow = NULL, ncol = NULL, as.table = TRUE, drop = TRUE) {
+layout_wrap.SparkR <- function(data, vars = NULL, nrow = NULL, ncol = NULL,
+    as.table = TRUE, drop = TRUE) {
   vars <- as.character(unlist(vars))
 
   data <- data[1][[1]]

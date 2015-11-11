@@ -17,9 +17,9 @@ ggplot_build <- function(plot) {
   plot <- plot_clone(plot)
   layers <- plot$layers
   layer_data <- lapply(layers, function(y) y$data)
-  
+ 
   scales <- plot$scales
-  
+ 
   # Apply function to layer and matching data
   dlapply <- function(f) {
     out <- vector("list", length(data))
@@ -70,14 +70,14 @@ ggplot_build <- function(plot) {
   reset_scales(panel)
   panel <- train_position(panel, data, scale_x(), scale_y())
   data <- map_position(panel, data, scale_x(), scale_y())
-  
+ 
   # Train and map non-position scales
   npscales <- scales$non_position_scales()
   if (npscales$n() > 0) {
     lapply(data, scales_train_df, scales = npscales)
     data <- lapply(data, scales_map_df, scales = npscales)
   }
-  
+ 
   # Train coordinate system
   panel <- train_ranges(panel, plot$coordinates)
  
@@ -92,9 +92,9 @@ ggplot_build.SparkR <- function(plot) {
 
   layers <- plot$layers
   layer_data <- lapply(layers, function(y) y$data)
-  
+ 
   scales <- plot$scales
-  
+ 
   # Apply function to layer and matching data
   dlapply <- function(f) {
     out <- vector("list", length(data))
@@ -135,7 +135,7 @@ ggplot_build.SparkR <- function(plot) {
   scales_add_missing(plot, c("x", "y"), plot$plot_env)
  
   data <- lapply(data, scales_transform_df.SparkR, scales = scales)
-  
+ 
   # Reparameterise geoms from (e.g.) y and width to ymin and ymax
   data <- dlapply(function(d, p) p$reparameterise.SparkR(d))
 
@@ -167,7 +167,7 @@ ggplot_build.SparkR <- function(plot) {
     lapply(data, scales_train_df, scales = npscales)
     data <- lapply(data, scales_map_df, scales = npscales)
   }
-  
+ 
   # Apply position adjustments
   data <- dlapply(function(d, p) p$adjust_position(d))
 

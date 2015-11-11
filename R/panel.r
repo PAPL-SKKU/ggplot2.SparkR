@@ -26,12 +26,11 @@ new_panel <- function() {
 # @param data a list of data frames (one for each layer), and one for the plot
 # @param plot_data the default data frame
 # @return an updated panel object
-
 train_layout <- function(panel, facet, data, plot_data) {
   layout <- facet_train_layout(facet, c(list(plot_data), data))
   panel$layout <- layout
   panel$shrink <- facet$shrink
-  
+ 
   panel
 }
 
@@ -73,7 +72,7 @@ train_position <- function(panel, data, x_scale, y_scale) {
   if (is.null(panel$y_scales) && !is.null(y_scale)) {
     panel$y_scales <- rlply(max(layout$SCALE_Y), scale_clone(y_scale))
   }
-  
+ 
   # loop over each layer, training x and y scales in turn
   for(layer_data in data) {
     match_id <- match(layer_data$PANEL, layout$PANEL)
@@ -92,7 +91,7 @@ train_position <- function(panel, data, x_scale, y_scale) {
       scale_apply(layer_data, y_vars, scale_train, SCALE_Y, panel$y_scales)
     }
   }
-  
+ 
   panel
 }
 
@@ -124,7 +123,7 @@ train_position.SparkR <- function(panel, data, x_scale, y_scale) {
       panel$y_scales[[1]]$range$range <- distinct(select(layer_data, layer_data$y))
     }
   }
-  
+ 
   panel
 }
 
@@ -183,10 +182,10 @@ map_position.SparkR <- function(data) {
       if(pair[1] == "x" && pair[2] == "string") {
         # Mapping an unique number for each unique x value
         layer_data <- withColumnRenamed(layer_data, "x", "x_old")
-        
+ 
 	disc_x <- bindIDs(SparkR::arrange(distinct(select(layer_data, "x_old")), "x_old"))
         disc_x <- withColumn(disc_x, "x", cast(disc_x$"_2", "int"))
-        
+ 
 	layer_data <- SparkR::join(layer_data, disc_x, layer_data$x_old == disc_x$"_1", "inner")
         layer_data <- select(layer_data, as.list(column_list))
       } else if(pair[1] == "x" && pair[2] == "int") {
@@ -199,10 +198,10 @@ map_position.SparkR <- function(data) {
       if(pair[1] == "y" && pair[2] == "string") {
         # Mapping an unique number for each unique y value
         layer_data <- withColumnRenamed(layer_data, "y", "y_old")
-        
+
 	disc_y <- bindIDs(SparkR::arrange(distinct(select(layer_data, "y_old")), "y_old"))
         disc_y <- withColumn(disc_y, "y", cast(disc_y$"_2", "int"))
-        
+
 	layer_data <- SparkR::join(layer_data, disc_y, layer_data$y_old == disc_y$"_1", "inner")
         layer_data <- select(layer_data, as.list(column_list))
       } else if(pair[1] == "y" && pair[2] == "int") {
