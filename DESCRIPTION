@@ -132,6 +132,7 @@ Collate:
     'layer.r'
     'limits.r'
     'panel.r'
+    'plot-SparkR.r'
     'plot-build.r'
     'plot-construction.r'
     'plot-last.r'
