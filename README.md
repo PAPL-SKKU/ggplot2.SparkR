@@ -20,3 +20,13 @@ Or the development version from github: //after release
 # install.packages("devtools")
 devtools::install_github("PAPL-SKKU/ggplot2.sparkR")
 ```
+
+## Mailing list
+
+Your are welcome to ask ggplot2.SparkR questions or gubs on ...
+or send an email to ggplot2.SparkR@googlegroups.com.
+Anyone can read the archived discussion that you post messages.
+
+## Reference
+* [ggplot2](http://ggplot2.org): Plotting system for R by Hadely Wickham
+* [Apache Spark](http://spark.apache.org): Large-scale data processing engine.
