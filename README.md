@@ -27,6 +27,8 @@ Or the development version from github: //after release
 devtools::install_github("PAPL-SKKU/ggplot2.sparkR")
 ```
 
+* You'll need to make sure you have the most recent version of R and Apache Spark since v.1.5.0
+
 ## Mailing list
 
 Your are welcome to ask ggplot2.SparkR questions or gubs on ...
