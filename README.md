@@ -34,5 +34,5 @@ or send an email to ggplot2.SparkR@googlegroups.com.
 Anyone can read the archived discussion that you post messages.
 
 ## Other Resources
-* [ggplot2](http://ggplot2.org): Plotting system for R by Hadely Wickham
+* [ggplot2](http://ggplot2.org): Plotting system for R by Hadley Wickham
 * [Apache Spark](http://spark.apache.org): Large-scale data processing engine.
