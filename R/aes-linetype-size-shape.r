@@ -6,7 +6,6 @@
 #' @name aes_linetype_size_shape
 #' @aliases linetype size shape
 #' @examples
-#'
 #' # Line types should be specified with either an integer, a name, or with a string of
 #' # an even number (up to eight) of hexidecimal digits which give the lengths in
 #' # consecutive positions in the string.

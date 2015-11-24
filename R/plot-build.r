@@ -84,6 +84,19 @@ ggplot_build <- function(plot) {
   list(data = data, panel = panel, plot = plot)
 }
 
+#' Build ggplot for rendering using Spark DataFrame.
+#'
+#' This function takes the plot object, and performs all steps necessary to
+#' produce an object that can be rendered.  This function outputs two pieces:
+#' a list of DataFrames (one for each layer), and a panel object, which
+#' contain all information about axis limits, breaks etc.
+#'
+#' @param plot ggplot.SparkR object
+#' @seealso \code{\link{print.ggplot.SparkR}} and \code{\link{benchplot}}
+#'  for functions that contain the complete set of steps for generating
+#'  a ggplot2 plot.
+#' @keywords internal
+#' @export
 ggplot_build.SparkR <- function(plot) {
   if(length(plot$layers)==0) stop("No layers in plot", call.=FALSE)
 

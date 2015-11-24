@@ -1,8 +1,5 @@
 #' Single curved line segments.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "curve")}
-#'
 #' @inheritParams grid::curveGrob
 #' @inheritParams geom_point
 #' @inheritParams geom_segment

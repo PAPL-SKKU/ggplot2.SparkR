@@ -1,8 +1,5 @@
 #' Sum unique values.  Useful for overplotting on scatterplots.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("stat", "sum")}
-#'
 #' @inheritParams stat_identity
 #' @return a data.frame with additional columns
 #'  \item{n}{number of observations at position}

@@ -2,7 +2,7 @@
 #'
 #' Return a new DataFrame containing the binding of ID with original DataFrame.
 #' This method only used by one-column DataFrame now.
-#' @param df A Spark DataFrame
+#' @param data A Spark DataFrame
 #' @return A DataFrame containing the result of the binding with IDs
 #' @rdname bindIDs
 #' @export

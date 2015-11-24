@@ -1,6 +1,6 @@
-#' ggplot2.
+#' ggplot2.SparkR
 #'
-#' @name ggplot2
+#' @name ggplot2.SparkR
 #' @docType package
 #' @import plyr digest scales grid reshape2 proto gtable
 NULL

@@ -16,9 +16,6 @@
 #' This gives a roughly 95% confidence interval for comparing medians.
 #' See McGill et al. (1978) for more details.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "boxplot")}
-#'
 #' @seealso \code{\link{stat_quantile}} to view quantiles conditioned on a
 #'   continuous variable,  \code{\link{geom_jitter}} for another way to look
 #'   at conditional distributions"
@@ -37,10 +34,8 @@
 #'    square-roots of the number of observations in the groups (possibly
 #'    weighted, using the \code{weight} aesthetic).
 #' @export
-#'
 #' @references McGill, R., Tukey, J. W. and Larsen, W. A. (1978) Variations of
 #'     box plots. The American Statistician 32, 12-16.
-#'
 #' @examples
 #' \donttest{
 #' p <- ggplot(mtcars, aes(factor(cyl), mpg))
