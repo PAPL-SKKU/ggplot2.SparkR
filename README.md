@@ -12,7 +12,7 @@ Until now, 5 graph types (bar, bin2d, boxplot, histogram, stat-sum graphs) and 8
 (facet-grid, facet-wrap, coord-flip, scale-x-log10, scale-y-log10, position-fill, 
 position-stack, position-dodge) are supported. We plans to further extend it in the future.
 
-Find out more at <http://PAPL-SKKU.github.io/ggplot2.SparkR/>
+Find out more at <http://papl-skku.github.io/ggplot2.SparkR/>
 
 ## Installation
 
@@ -32,7 +32,7 @@ devtools::install_github("PAPL-SKKU/ggplot2.SparkR")
 ## Mailing list
 
 Your are welcome to ask ggplot2.SparkR questions or gubs on ...
-or send an email to ggplot2.SparkR@googlegroups.com.
+or send an email to ggplot2-sparkr@googlegroups.com.
 Anyone can read the archived discussion that you post messages.
 
 ## Other Resources
