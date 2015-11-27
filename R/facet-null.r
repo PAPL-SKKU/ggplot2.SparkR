@@ -21,11 +21,8 @@ facet_train_layout.null <- function(facet, data) {
   } 
   else {
     temp_df <- SparkR::limit(data[1][[1]], 1)
-    temp_df <- SparkR::mutate(temp_df, PANEL = cast(isNotNull(temp_df[[1]]), "integer"),
-                    ROW = cast(isNotNull(temp_df[[1]]), "integer"),
-                    COL = cast(isNotNull(temp_df[[1]]), "integer"),
-                    SCALE_X = cast(isNotNull(temp_df[[1]]), "integer"),
-                    SCALE_Y = cast(isNotNull(temp_df[[1]]), "integer"))
+    temp_df <- SparkR::mutate(temp_df, PANEL = lit(1), ROW = lit(1), COL = lit(1),
+	                      SCALE_X = lit(1), SCALE_Y = lit(1))
 
     temp_df <- select(temp_df, "PANEL", "ROW", "COL", "SCALE_X", "SCALE_Y")
     temp_df
@@ -43,7 +40,7 @@ facet_map_layout.null <- function(facet, data, layout) {
       return(cbind(data, PANEL = integer(0)))
     data$PANEL <- 1L
   } else {
-    data <- withColumn(data, "PANEL", cast(isNull(data[[1]]), "integer") + 1)
+    data <- withColumn(data, "PANEL", lit(1))
   }
   
   data

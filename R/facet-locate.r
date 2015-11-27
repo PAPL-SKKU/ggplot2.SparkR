@@ -55,24 +55,24 @@ locate_grid.SparkR <- function(data, panels, rows = NULL, cols = NULL, margins =
   
   rows_is_null <- length(rows_char) == 0
   cols_is_null <- length(cols_char) == 0
- 
+
   # Add PANEL variable 
   if(!rows_is_null && !cols_is_null) {
-    panels_rename <- withColumnRenamed(panels, eval(rows_char), "row_old")
-    panels_rename <- withColumnRenamed(panels_rename, eval(cols_char), "col_old")
+    panels <- SparkR::rename(panels, row_old = panels[[rows_char]], col_old = panels[[cols_char]])
 
-    keys <- SparkR::join(panels_rename, data, panels_rename$row_old == data[[eval(rows_char)]] &
-                                              panels_rename$col_old == data[[eval(cols_char)]], "inner")
+    data <- SparkR::join(panels, data, 
+    			 panels$row_old == data[[rows_char]] &
+			 panels$col_old == data[[cols_char]], "inner")
   } else if(!rows_is_null) {
-    panels_rename <- withColumnRenamed(panels, eval(rows_char), "row_old")
-    keys <- SparkR::join(panels_rename, data, panels_rename$row_old == data[[eval(rows_char)]], "inner")
+    panels <- withColumnRenamed(panels, eval(rows_char), "row_old")
+    data <- SparkR::join(panels, data, panels$row_old == data[[rows_char]], "inner")
   } else if(!cols_is_null) {
-    panels_rename <- withColumnRenamed(panels, eval(cols_char), "col_old")
-    keys <- SparkR::join(panels_rename, data, panels_rename$col_old == data[[eval(cols_char)]], "inner")
+    panels <- withColumnRenamed(panels, eval(cols_char), "col_old")
+    data <- SparkR::join(panels, data, panels$col_old == data[[cols_char]], "inner")
   }
 
   # Return with unnessary columns (col_old, row_old, COL, ROW)
-  keys
+  data
 }
 
 locate_wrap <- function(data, panels, vars) {
@@ -108,7 +108,7 @@ locate_wrap.SparkR <- function(data, panels, vars) {
   vars <- as.character(unlist(vars))
   panels <- withColumnRenamed(panels, eval(vars), "init")
 
-  keys <- SparkR::join(data, panels, data[[eval(vars)]] == panels$init, "inner")
+  data <- SparkR::join(data, panels, data[[eval(vars)]] == panels$init, "inner")
 
-  keys
+  data
 }

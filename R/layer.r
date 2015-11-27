@@ -32,11 +32,12 @@ Layer <- proto(expr = {
       show_guide = FALSE
     }
 
-
     if (is.null(geom) && is.null(stat)) stop("Need at least one of stat and geom")
 
     data <- fortify(data)
-    if (!is.null(mapping) && !inherits(mapping, "uneval")) stop("Mapping should be a list of unevaluated mappings created by aes or aes_string")
+    if (!is.null(mapping) && !inherits(mapping, "uneval")) {
+      stop("Mapping should be a list of unevaluated mappings created by aes or aes_string")
+    }
 
     if (is.character(geom)) geom <- Geom$find(geom)
     if (is.character(stat)) stat <- Stat$find(stat)
@@ -129,7 +130,26 @@ Layer <- proto(expr = {
     .$position$print()
   }
 
+  compute_aesthetics.SparkR <- function(., data, plot) {
+    aesthetics <- .$layer_mapping(plot$mapping)
+    values <- as.character(unlist(aesthetics))
+    keys <- names(aesthetics)
+    data <- select(data, append(as.list(values), "PANEL"))
 
+    for(index in 1:length(keys)) {
+      if(keys[index] == "group") keys[index] <- "grouped"
+      data <- withColumnRenamed(data, values[index], keys[index])
+    }
+
+    if(!is.null(.$geom_params$group)) {
+      aesthetics["group"] <- .$geom_params$group
+    }
+
+    scales_add_defaults(plot$scales, data, aesthetics, plot$plot_env)
+ 
+    data
+  }
+ 
   compute_aesthetics <- function(., data, plot) {
     aesthetics <- .$layer_mapping(plot$mapping)
 
@@ -167,7 +187,6 @@ Layer <- proto(expr = {
     data.frame(evaled)
   }
 
-
   calc_statistic <- function(., data, scales) {
     if (empty(data)) return(data.frame())
 
@@ -176,16 +195,47 @@ Layer <- proto(expr = {
       paste("stat_", .$stat$objname, sep=""))
 
     res <- NULL
-    try(res <- do.call(.$stat$calculate_groups, c(
-      list(data=as.name("data"), scales=as.name("scales")),
-      .$stat_params)
-    ))
-    if (is.null(res)) return(data.frame())
 
+    if(!is.null(scales)) {
+      try(res <- do.call(.$stat$calculate_groups, c(
+        list(data=as.name("data"), scales=as.name("scales")),
+        .$stat_params)
+      ))
+
+      if (is.null(res)) return(data.frame())
+    } else {
+      try(res <- do.call(.$stat$calculate_groups.SparkR,
+			 c(list(data = as.name("data"), scales = as.name("scales")), .$stat_params)))
+
+      if(is.null(res)) {
+        stop("Maybe something wrong in calcaulate_groups.", call. = FALSE)
+      }
+    }
+ 
     res
-
   }
 
+  map_statistic.SparkR <- function(., data, plot) {
+    aesthetics <- .$mapping
+
+    # Assemble aesthetics from layer, plot and stat mappings
+    if(.$inherit.aes) {
+      aesthetics <- defaults(aesthetics, plot$mapping)
+    }
+    aesthetics <- defaults(aesthetics, .$stat$default_aes())
+    aesthetics <- compact(aesthetics)
+
+    new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
+
+    if(length(new) == 0) return(data)
+
+    # Add map stat output to aesthetics
+    data <- withColumn(data, names(new), data[[as.character(new)]])
+    # Add any new scales, if needed
+    scales_add_defaults(plot$scales, data, new, plot$plot_env)
+
+    data
+  }
 
   map_statistic <- function(., data, plot) {
     if (empty(data)) return(data.frame())
@@ -199,7 +249,7 @@ Layer <- proto(expr = {
     aesthetics <- compact(aesthetics)
 
     new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
-    
+ 
     if (length(new) == 0) return(data)
 
     # Add map stat output to aesthetics
@@ -218,11 +268,15 @@ Layer <- proto(expr = {
     cunion(stat_data, data)
   }
 
+  reparameterise.SparkR <- function(., data) {
+    if(is.null(data)) stop("data is empty.", call. = FALSE)
+    .$geom$reparameterise.SparkR(data, .$geom_params)
+  }
+
   reparameterise <- function(., data) {
     if (empty(data)) return(data.frame())
     .$geom$reparameterise(data, .$geom_params)
   }
-
 
   adjust_position <- function(., data) {
     ddply(data, "PANEL", function(data) {
@@ -249,133 +303,6 @@ Layer <- proto(expr = {
 
   class <- function(.) "layer"
 })
-
-compute_aesthetics.SparkR <- function(df, plot) {
-  values <- as.character(unlist(plot$mapping))
-  keys <- names(plot$mapping)
-  data <- select(df, append(as.list(values), "PANEL"))
-
-  for(index in 1:length(keys)) {
-    if(keys[index] == "group") keys[index] <- "grouped"
-    data <- withColumnRenamed(data, eval(values[index]), eval(keys[index]))
-  }
-
-  scales_add_defaults(plot$scales, data, plot$mapping, plot$plot_env)
-  data
-}
-
-map_statistic.SparkR <- function(data, plot) {
-  layers <- plot$layers[[1]]
-  aesthetics <- layers$mapping
-
-  if(layers$inherit.aes) aesthetics <- defaults(aesthetics, plot$mapping)
-
-  aesthetics <- defaults(aesthetics, layers$stat$default_aes())
-  aesthetics <- compact(aesthetics)
-
-  new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
-  
-  if(length(new) == 0) return(data)
-
-  data <- withColumn(data, names(new), data[[as.character(new)]])
-  scales_add_defaults(plot$scales, data, new, plot$plot_env)
-
-  data
-}
-
-adjust_position.SparkR <- function(data, layers) {
-  position <- layers[[1]]$position$objname
-  
-  switch(position, 
-    dodge = {
-      count_data <- collect(SparkR::count(groupBy(data, "x")))
-      x_data <- count_data$x
-      n <- count_data$count
-      d_width <- collect(agg(groupBy(data, "x", "width"), d_width = max(data$xmax - data$xmin)))$d_width
-      
-      for(index in 1:length(x_data)) {
-        filter_df <- filter(data, data$x == x_data[index])
- 
-        for(i in 1:n[index]) {
-          new_df <- limit(filter_df, i)
-
-          if(i == 1) old_df <- new_df
-          else {
-            temp_df <- new_df
-            new_df <- except(new_df, old_df)
-            old_df <- temp_df
-          }
-
-          temp_df <- withColumn(new_df, "groupidx", cast(isNull(new_df$x), "integer") + i)
-          if(i == 1) unioned <- temp_df
-          else       unioned <- unionAll(unioned, temp_df)
-        } 
-        temp_df <- SparkR::rename(unioned, x_old = unioned$x, xmin_old = unioned$xmin, xmax_old = unioned$xmax)
-
-        if(n[index] == 1) {
-          temp_df <- withColumn(temp_df, "x", temp_df$x_old)
-          temp_df <- SparkR::mutate(temp_df, xmin = temp_df$xmin_old, xmax = temp_df$xmax_old)
-        } else { 
-          temp_df <- withColumn(temp_df, "x", temp_df$x_old + temp_df$width * ((temp_df$groupidx - 0.5) / n[index] - 0.5))
-          temp_df <- SparkR::mutate(temp_df, xmin = temp_df$x - d_width[index] / n[index] / 2,
-                                             xmax = temp_df$x + d_width[index] / n[index] / 2)
-        }
-
-        if(index == 1) unioned2 <- temp_df
-        else           unioned2 <- unionAll(unioned2, temp_df)
-      }
-
-      data <- unioned2
-    },
-    identity = {NULL},
-    stack = {
-    }
-  )
-  
-  data
-}
-
-reparameterise.SparkR <- function(data, plot) {
-  objname <- plot$layers[[1]]$geom$objname
-
-  switch(objname,
-    histogram = , 
-    bar = {
-      data <- SparkR::mutate(data, ymin = data$y * 0, ymax = data$y,
-                                   xmin = data$x - (data$width / 2), xmax = data$x + (data$width / 2))
-
-      if(length(grep("fill", columns(data))) == 0)
-        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density", "width",
-                             "PANEL", "ymin", "ymax", "xmin", "xmax")
-      else
-        data <- select(data, "y", "count", "x", "ndensity", "ncount", "density", "fill", "width",
-                             "PANEL", "ymin", "ymax", "xmin", "xmax")
-    },
-    boxplot = {
-      params <- plot$layers[[1]]$geom_params
- 
-      if(is.null(params) || is.null(params$varwidth) || 
-         !params$varwidth || length(grep("relvarwidth", columns(data))) == 0) {
-        data <- SparkR::mutate(data, xmin = data$x - data$width / 2, xmax = data$x + data$width / 2)
-      } else {
-        max_relvarwidth <- collect(select(data, max(data$relvarwidth)))[[1]]
-        data <- SparkR::mutate(data, xmin = data$x - (data$ralvarwidth * data$width) / (2 * max_relvarwidth),
-                                     xmax = data$x + (data$relvarwidth * data$width) / (2 * max_relvarwidth))
-      }
-
-      if(length(grep("fill", columns(data))) == 0)
-        data <- select(data, "ymin", "lower", "middle", "upper", "ymax",
-                             "notchupper", "notchlower", "x", "width",
-                             "PANEL", "weight", "xmin", "xmax")
-      else
-        data <- select(data, "ymin", "lower", "middle", "upper", "ymax",
-                             "notchupper", "notchlower", "x", "fill", "width",
-                             "PANEL", "weight", "xmin", "xmax")
-    }
-  )
-
-  data
-}
 
 #' Create a new layer
 #'

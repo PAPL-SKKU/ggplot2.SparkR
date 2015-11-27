@@ -32,28 +32,25 @@ isDiscrete <- function(data) {
 
   if(length(grep("grouped", data_types)) == 0) {
     x_data_types <- data_types[grep("x", data_types) + 1]
-    if(x_data_types == "string" || x_data_types == "boolean")
-      isDiscrete <- TRUE
-#    else if(collect(select(data, countDistinct(data$x)))[[1]] < 7)
-#      isDiscrete <- TRUE
+    if(x_data_types == "string" || x_data_types == "boolean") isDiscrete <- TRUE
 
     if(length(grep("y", data_types)) != 0) {
       y_data_types <- data_types[grep("y", data_types) + 1]
       if(y_data_types == "string" || y_data_types == "boolean") {
         isDiscrete <- TRUE
         isDiscreteY <- TRUE
-      }# else if(collect(select(data, countDistinct(data$y)))[[1]] < 7) {
-       # isDiscrete <- TRUE
-       # isDiscreteY <- TRUE
-      #}
+      }
     }
 
-    if(isDiscrete && isDiscreteY) column_arr <- c("x", "y")
-    else if(isDiscrete)           column_arr <- c("x")
-    else                          column_arr <- c() 
-
+    if(isDiscrete && isDiscreteY) {
+      column_arr <- c("x", "y")
+    } else if(isDiscrete) {
+      column_arr <- c("x")
+    } else {
+      column_arr <- c()
+    }
   } else {
-    column_arr <- c("grouped")  
+    column_arr <- c("grouped")
   }
 
   if(length(grep("fill", data_types)) != 0)    column_arr <- append(column_arr, "fill")
@@ -62,40 +59,47 @@ isDiscrete <- function(data) {
   column_arr
 }
 
-make_group.SparkR <- function(data) {
-  discrete_col <- append(isDiscrete(data), "PANEL")
-  disc <- distinct(select(data, as.list(discrete_col)))
-  disc <- map_position.SparkR(disc)
-
-  complete_col <- "group"
-
-  for(index in 1:length(discrete_col)) {
-    temp_df <- select(disc, eval(discrete_col[index]))
-    type_disc <- unlist(dtypes(temp_df))[2]
-    temp_df <- bindIDs(temp_df)
-
-    temp_df <- withColumn(temp_df, eval(discrete_col[index]), cast(temp_df$"_1", eval(type_disc)))
-
-    temp_df <- withColumn(temp_df, "group_id", cast(temp_df$"_2", "integer"))
-    temp_df <- select(temp_df, eval(discrete_col[index]), "group_id")
-    complete_col <- append(complete_col, discrete_col[index])
-    
-    if(index == 1) {
-      joined <- temp_df
-      joined <- withColumnRenamed(joined, "group_id", "group")
+make_group.SparkR <- function(data, plot) {
+  joined <- NULL
+  if(plot$layers[[1]]$geom$objname != "bin2d") {
+    discrete_col <- append(isDiscrete(data), "PANEL")
+    disc <- distinct(select(data, as.list(discrete_col)))
+    disc <- map_position.SparkR(list(disc))[[1]]
+ 
+    if(length(grep("fill", columns(disc)))) {
+      disc <- SparkR::arrange(disc, "x", "fill", "PANEL")
+    } else if(length(grep("colour", columns(disc)))) {
+      disc <- SparkR::arrange(disc, "x", "colour", "PANEL")
+    } else {
+      disc <- SparkR::arrange(disc, "x", "PANEL")
     }
-    else {
-      joined <- SparkR::join(joined, temp_df, joined$group == temp_df$group_id, "inner")
+    complete_col <- "group"
+
+    for(index in 1:length(discrete_col)) {
+      temp_df <- select(disc, discrete_col[index])
+      type_disc <- unlist(dtypes(temp_df))[2]
+      temp_df <- bindIDs(temp_df)
+
+      temp_df <- withColumn(temp_df, discrete_col[index], cast(temp_df$"_1", type_disc))
+      temp_df <- withColumn(temp_df, "group_id", cast(temp_df$"_2", "integer"))
+      temp_df <- select(temp_df, discrete_col[index], "group_id")
+      complete_col <- append(complete_col, discrete_col[index])
+
+      if(index == 1) {
+        joined <- withColumnRenamed(temp_df, "group_id", "group")
+      } else {
+        joined <- SparkR::join(joined, temp_df, joined$group == temp_df$group_id, "inner")
+      }
+
+      joined <- select(joined, as.list(complete_col))
     }
-    
-    joined <- select(joined, as.list(complete_col))
   }
-  
+
   joined
 }
 
 add_group.SparkR <- function(data, group, plot) {
-  if(plot$layers[[1]]$geom$objname != "bin2d") {
+  if(!is.null(group)) {
     column_list <- as.list(append(columns(data), "group"))
     group <- SparkR::rename(group, PANEL_OLD = group$PANEL)
     joined_cmd <- "data$PANEL == group$PANEL_OLD"
@@ -115,14 +119,21 @@ add_group.SparkR <- function(data, group, plot) {
       joined_cmd <- paste0(joined_cmd, " & data$fill == group$fill_OLD")
     }
 
+    if(length(grep("colour", columns(group)))) {
+      group <- SparkR::rename(group, colour_OLD = group$colour)
+      joined_cmd <- paste0(joined_cmd, " & data$colour == group$colour_OLD")
+    }
+
     joined <- SparkR::join(data, group, eval(parse(text = joined_cmd)), "inner")
     data <- select(joined, column_list)
  
     if(length(grep("fill", columns(group)))) {
       data <- SparkR::arrange(data, "x", "fill")
+    } else if(length(grep("colour", columns(group)))) {
+      data <- SparkR::arrange(data, "x", "colour")
     }
   } 
-  
+ 
   data
 }
 

@@ -77,14 +77,14 @@ scales_transform_df.SparkR <- function(scales, data) {
     scale_type <- scales$scales[[index]]$trans$name
     done <- scales$scales[[index]]$trans$done
     scale_aes <- scales$scales[[index]]$aesthetics[1]
-      
+ 
     for(col_list in columns(data)) {
       if(scale_aes == col_list && !is.null(scale_type) && is.null(done)) {
         scale_aes_old <- paste0(scale_aes, "_OLD")
  
         if(scale_type == "log-10") {
-          data <- withColumnRenamed(data, eval(scale_aes), eval(scale_aes_old))
-          data <- withColumn(data, eval(scale_aes), log10(data[[eval(scale_aes_old)]])) 
+          data <- withColumnRenamed(data, scale_aes, scale_aes_old)
+          data <- withColumn(data, scale_aes, log10(data[[scale_aes_old]])) 
         }
         scales$scales[[index]]$trans$done <- TRUE
       }
@@ -100,7 +100,7 @@ scales_add_defaults <- function(scales, data, aesthetics, env) {
   names(aesthetics) <- unlist(lapply(names(aesthetics), aes_to_scale))
 
   new_aesthetics <- setdiff(names(aesthetics), scales$input())
-  
+ 
   # No new aesthetics, so no new scales to add
   if (is.null(new_aesthetics)) return()
 
@@ -126,10 +126,11 @@ scales_add_defaults <- function(scales, data, aesthetics, env) {
     
     for(aes in datacols) {
       type_col <- type_arr[grep(aes, type_arr) + 1]
-      if(type_col == "string" || type_col == "boolean")
+      if(type_col == "string" || type_col == "boolean") {
         type <- "discrete"
-      else  
+      } else {
         type <- "continuous"
+      }
 
       scale_name <- paste("scale", aes, type, sep = "_")
       scale_f <- find_global(scale_name, env, mode = "function")
@@ -156,7 +157,6 @@ scales_add_missing <- function(plot, aesthetics, env) {
   }
 }
 
-
 # Look for object first in parent environment and if not found, then in
 # ggplot2 namespace environment.  This makes it possible to override default
 # scales by setting them in the parent environment.
@@ -165,14 +165,13 @@ find_global <- function(name, env, mode = "any") {
     return(get(name, envir = env, mode = mode))
   }
 
-  nsenv <- asNamespace("ggplot2")
+  nsenv <- asNamespace("ggplot2.SparkR")
   if (exists(name, envir = nsenv, mode = mode)) {
     return(get(name, envir = nsenv, mode = mode))
   }
 
   NULL
 }
-
 
 # Determine default type of a scale
 scale_type <- function(x) UseMethod("scale_type")

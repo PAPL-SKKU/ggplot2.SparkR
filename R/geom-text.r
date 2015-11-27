@@ -1,8 +1,5 @@
 #' Textual annotations.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "text")}
-#'
 #' @section Alignment:
 #' You can modify text alignment with the \code{vjust} and \code{hjust}
 #' aesthetics. These can either be a number between 0 (right/bottom) and

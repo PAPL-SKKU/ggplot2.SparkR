@@ -15,6 +15,8 @@
 #' @family position scales
 #' @export
 #' @examples
+#' \donttest{
+#'
 #' # We'll start by creating some nonsense data with dates
 #' df <- data.frame(
 #'   date = seq(Sys.Date(), len=100, by="1 day")[sample(100, 50)],
@@ -73,6 +75,7 @@
 #' # Then we can group and facet by the new "variable" variable
 #' (p <- ggplot(em, aes(date, value)) + geom_line(aes(group = variable)))
 #' p + facet_grid(variable ~ ., scale = "free_y")
+#' }
 scale_x_date <- function(..., expand = waiver(), breaks = pretty_breaks(),
   minor_breaks = waiver()) {
 

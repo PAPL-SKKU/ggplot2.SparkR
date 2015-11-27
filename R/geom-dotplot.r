@@ -16,9 +16,6 @@
 #' hide the y axis, as in one of the examples, or manually scale it
 #' to match the number of dots.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "dotplot")}
-#'
 #' @inheritParams geom_point
 #' @param binaxis which axis to bin along "x" (default) or "y"
 #' @param method "dotdensity" (default) for dot-density binning, or
@@ -39,10 +36,8 @@
 #'   that \code{position = "stack"} should have, but can't (because this geom has
 #'   some odd properties).
 #' @export
-#'
 #' @references Wilkinson, L. (1999) Dot plots. The American Statistician,
 #'    53(3), 276-281.
-#'
 #' @examples
 #'
 #' ggplot(mtcars, aes(x = mpg)) + geom_dotplot()

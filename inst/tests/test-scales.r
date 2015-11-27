@@ -134,12 +134,12 @@ test_that("scales looked for in appropriate place", {
   p0 <- qplot(mpg, wt, data = mtcars) + scale_x_continuous("0")
   expect_equal(xlabel(p0), "0")
 
-  scale_x_continuous <- function(...) ggplot2::scale_x_continuous("1")
+  scale_x_continuous <- function(...) ggplot2.SparkR::scale_x_continuous("1")
   p1 <- qplot(mpg, wt, data = mtcars)
   expect_equal(xlabel(p1), "1")
 
   f <- function() {
-    scale_x_continuous <- function(...) ggplot2::scale_x_continuous("2")
+    scale_x_continuous <- function(...) ggplot2.SparkR::scale_x_continuous("2")
     qplot(mpg, wt, data = mtcars)
   }
   p2 <- f()
@@ -155,7 +155,7 @@ test_that("find_global searches in the right places", {
 
   # This should find the scale object in the package environment
   expect_identical(find_global("scale_colour_hue", testenv),
-    ggplot2::scale_colour_hue)
+    ggplot2.SparkR::scale_colour_hue)
 
   # Set an object with the same name in the environment
   testenv$scale_colour_hue <- "foo"
@@ -166,5 +166,5 @@ test_that("find_global searches in the right places", {
   # If we search in the empty env, we should end up with the object
   # from the ggplot2 namespace
   expect_identical(find_global("scale_colour_hue", emptyenv()),
-    ggplot2::scale_colour_hue)
+    ggplot2.SparkR::scale_colour_hue)
 })

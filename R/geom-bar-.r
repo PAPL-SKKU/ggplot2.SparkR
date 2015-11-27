@@ -34,9 +34,6 @@
 #' \href{http://www.b-eye-network.com/view/index.php?cid=2468}{article on this topic}.
 #' This is the reason it doesn't make sense to use a log-scaled y axis with a bar chart
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "bar")}
-#'
 #' @seealso \code{\link{stat_bin}} for more details of the binning algorithm,
 #'   \code{\link{position_dodge}} for creating side-by-side barcharts,
 #'   \code{\link{position_stack}} for more info on stacking,
@@ -142,6 +139,11 @@ GeomBar <- proto(Geom, {
   default_aes <- function(.) aes(colour=NA, fill="grey20", size=0.5, linetype=1, weight = 1, alpha = NA)
 
   required_aes <- c("x")
+
+  reparameterise.SparkR <- function(., df, params) {
+    SparkR::mutate(df, ymin = lit(0), ymax = df$y,
+		   xmin = df$x - (df$width / 2), xmax = df$x + (df$width / 2))
+  }
 
   reparameterise <- function(., df, params) {
     df$width <- df$width %||%

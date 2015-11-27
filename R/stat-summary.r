@@ -13,7 +13,7 @@
 #' can use.
 #'
 #' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("stat", "summary")}
+#' \Sexpr[results=rd,stage=build]{ggplot2.SparkR:::rd_aesthetics("stat", "summary")}
 #'
 #' @seealso \code{\link{geom_errorbar}}, \code{\link{geom_pointrange}},
 #'  \code{\link{geom_linerange}}, \code{\link{geom_crossbar}} for geoms to
