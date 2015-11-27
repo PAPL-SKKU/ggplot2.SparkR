@@ -31,7 +31,7 @@ devtools::install_github("PAPL-SKKU/ggplot2.SparkR")
 
 ## Mailing list
 
-Your are welcome to ask ggplot2.SparkR questions or gubs on ...
+Your are welcome to ask ggplot2.SparkR questions or bugs on [ggplot2.SparkR](https://groups.google.com/forum/?fromgroups#!forum/ggplot2-sparkr)
 or send an email to ggplot2-sparkr@googlegroups.com.
 Anyone can read the archived discussion that you post messages.
 
