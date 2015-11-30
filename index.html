@@ -37,6 +37,34 @@
 
 <h2>
 <a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
+<h3>
+  
+<a id="sparkr-installation" class="anchor" href="#sparkr-installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>SparkR Installation</h3>
+
+<h4>
+<a id="build-spark" class="anchor" href="#build-spark" aria-hidden="true"><span class="octicon octicon-link"></span></a>Build Spark</h4>
+
+<p>Build Spark with <a href="http://spark.apache.org/docs/latest/building-spark.html#building-with-buildmvn">Maven</a> and include the <code>-PsparkR</code> profile to build the R package. For example to use the default Hadoop versions you can run</p>
+
+<pre><code>  build/mvn -DskipTests -Psparkr package
+</code></pre>
+
+<h4>
+<a id="using-sparkr-from-rstudio" class="anchor" href="#using-sparkr-from-rstudio" aria-hidden="true"><span class="octicon octicon-link"></span></a>Using SparkR from RStudio</h4>
+
+<p>If you wish to use SparkR from RStudio or other R frontends you will need to set some environment variables which point SparkR to your Spark installation. For example </p>
+
+<pre><code># Set this to where Spark is installed
+Sys.setenv(SPARK_HOME="/Users/shivaram/spark")
+# This line loads SparkR from the installed directory
+.libPaths(c(file.path(Sys.getenv("SPARK_HOME"), "R", "lib"), .libPaths()))
+library(SparkR)
+sc &lt;- sparkR.init(master="local")
+</code></pre>
+
+<p>More details on <a href="https://github.com/apache/spark/tree/master/R">https://github.com/apache/spark/tree/master/R</a></p>
+
+<a id="ggplot2sparkr-installation" class="anchor" href="#ggplot2sparkr-installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>ggplot2.SparkR Installation</h3>
 
 <p>Get the released version from CRAN: //after release</p>
 
