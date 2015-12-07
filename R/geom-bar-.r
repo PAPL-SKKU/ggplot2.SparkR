@@ -41,6 +41,42 @@
 #' @inheritParams geom_point
 #' @examples
 #' \donttest{
+#' # Generate Spark DataFrame
+#' library(SparkR)
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' diamonds_df <- createDataFrame(sqlContext, diamonds)
+#'
+#' # By default, uses stat = "bin", which gives the count in each category
+#' g <- ggplot(diamonds_df, aes(cut))
+#' g + geom_bar()
+#' g + geom_bar(width = 0.5_
+#' g + geom_bar() + coord_flip()
+#' g + geom_bar(fill = "white", colour = "darkgreen")
+#'
+#' # Stacked bar charts
+#' g + geom_bar(aes(fill = color))
+#' g + geom_bar(aes(fill = clarity))
+#' 
+#' ggplot(diamonds_df, aes(clarity, fill = cut)) +
+#'   geom_bar()
+#' ggplot(diamonds_df, aes(color, fill = cut)) +
+#'   geom_bar() +
+#'   coord_flip()
+#'
+#' # Faceting is a good alternative:
+#' ggplot(diamonds_df, aes(color, fill = cut)) +
+#'   geom_bar() +
+#'   facet_wrap(~ cut)
+#'
+#' # Dodged bar charts
+#' ggplot(diamonds_df, aes(clarity, fill = cut)) +
+#'   geom_bar(position = "dodge")
+#' # compare with
+#' ggplot(diamonds_df, aes(cut, fill = cut)) +
+#'   geom_bar() +
+#'   facet_grid(. ~ clarity)
+#'
 #' # Generate data
 #' g <- ggplot(mtcars, aes(factor(cyl)))
 #'

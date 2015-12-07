@@ -12,6 +12,26 @@
 #' @inheritParams geom_point
 #' @examples
 #' \donttest{
+#' # Generate Spark DataFrame
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' movies_df <- createDataFrame(sqlContext, movies[sample(nrow(movies), 1000), ])
+#'
+#' # Basic example
+#' m <- ggplot(movies_df, aes(rating))
+#' m + geom_histogram()
+#' 
+#' # More complex
+#' m + geom_histogram(binwidth = 1)
+#' m + geom_histogram(binwidth = 0.5)
+#'
+#' m + geom_bar(binwidth = 0.1)
+#'
+#' # For transformed scales, binwidth applies to the transformed data.
+#' m + geom_histogram() + scale_x_log10()
+#' m + geom_histogram(binwidth = 1) + scale_x_log10()
+#'
+#' # Generate R data.frame
 #' set.seed(5689)
 #' movies <- movies[sample(nrow(movies), 1000), ]
 #' # Basic example

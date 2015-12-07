@@ -215,3 +215,10 @@ Collate:
     'zxx.r'
     'zzz.r'
 RoxygenNote: 5.0.1
+NeedsCompilation: no
+Packaged: 2015-12-07 00:12:32 UTC; jonghyun
+Author: Jong Hyun Bae [aut, cre],
+    Moon Kyung Kim [aut],
+    Jae W. Lee [aut],
+    Sang Oh Jeong [aut]
+Maintainer: Jong Hyun Bae <bnbbkr@gmail.com>

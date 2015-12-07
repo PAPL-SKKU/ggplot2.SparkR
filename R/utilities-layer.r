@@ -65,13 +65,13 @@ make_group.SparkR <- function(data, plot) {
     discrete_col <- append(isDiscrete(data), "PANEL")
     disc <- distinct(select(data, as.list(discrete_col)))
     disc <- map_position.SparkR(list(disc))[[1]]
- 
+
     if(length(grep("fill", columns(disc)))) {
-      disc <- SparkR::arrange(disc, "x", "fill", "PANEL")
+      disc <- SparkR::arrange(disc, "fill", "PANEL")
     } else if(length(grep("colour", columns(disc)))) {
-      disc <- SparkR::arrange(disc, "x", "colour", "PANEL")
+      disc <- SparkR::arrange(disc, "colour", "PANEL")
     } else {
-      disc <- SparkR::arrange(disc, "x", "PANEL")
+      disc <- SparkR::arrange(disc, "PANEL")
     }
     complete_col <- "group"
 

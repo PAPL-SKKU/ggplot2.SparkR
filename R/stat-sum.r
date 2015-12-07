@@ -6,6 +6,18 @@
 #'  \item{prop}{percent of points in that panel at that position}
 #' @export
 #' @examples
+#' # Generate Spark DataFrame
+#' library(SparkR)
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' diamonds_df <- createDataFrame(sqlContext, diamonds)
+#'
+#' d <- ggplot(diamonds_ds, aes(cut, clarity))
+#' d + stat_sum()
+#'
+#' d + stat_sum() +
+#'   scale_size_area()
+#'
 #' d <- ggplot(diamonds, aes(x = cut, y = clarity))
 #' d + stat_sum()
 #'
