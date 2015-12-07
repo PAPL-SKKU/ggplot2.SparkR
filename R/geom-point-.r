@@ -23,9 +23,6 @@
 #' way, using \code{\link{stat_sum}}. Another technique is to use transparent
 #' points, \code{geom_point(alpha = 0.05)}.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "point")}
-#'
 #' @seealso \code{\link{scale_size}} to see scale area of points, instead of
 #'   radius, \code{\link{geom_jitter}} to jitter points to reduce (mild)
 #'   overplotting

@@ -68,7 +68,7 @@ coord_train.cartesian <- function(coord, scales) {
 train_cartesian <- function(scale, limits, name) {
 
   # first, calculate the range that is the numerical limits in data space
-
+  
   # expand defined by scale OR coord
   if (is.null(limits)) {
     expand <- coord_expand_defaults(coord, scale)
@@ -79,5 +79,6 @@ train_cartesian <- function(scale, limits, name) {
 
   out <- scale_break_info(scale, range)
   names(out) <- paste(name, names(out), sep = ".")
+  
   out
 }

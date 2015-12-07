@@ -4,8 +4,6 @@
 #' observations at each location, then maps the count to point size. It
 #' useful when you have discrete data.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "point")}
 #' @inheritParams geom_point
 #' @export
 #' @examples

@@ -15,6 +15,8 @@
 #'   a vector of minor breaks.
 #' @export
 #' @examples
+#' \donttest{
+#'
 #' set.seed(1492)
 #' start <- ISOdate(2001, 1, 1, tz = "")
 #' df <- data.frame(
@@ -51,6 +53,7 @@
 #'   labels = date_format("%d/%m"))
 #' last_plot() + scale_x_datetime(breaks = date_breaks("1 day"),
 #'   minor_breaks = date_breaks("2 hour"))
+#' }
 scale_x_datetime <- function(..., expand = waiver(), breaks = pretty_breaks(),
   minor_breaks = waiver()) {
 

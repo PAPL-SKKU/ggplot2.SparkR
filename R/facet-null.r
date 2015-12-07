@@ -12,18 +12,37 @@ facet_null <- function(shrink = TRUE) {
 
 #' @export
 facet_train_layout.null <- function(facet, data) {
-  data.frame(
-    PANEL = 1L, ROW = 1L, COL = 1L,
-    SCALE_X = 1L, SCALE_Y = 1L)
+  data_class <- class(data[1][[1]])
+
+  if(length(grep("DataFrame", data_class)) == 0) {
+    data.frame(
+      PANEL = 1L, ROW = 1L, COL = 1L,
+      SCALE_X = 1L, SCALE_Y = 1L)
+  } 
+  else {
+    temp_df <- SparkR::limit(data[1][[1]], 1)
+    temp_df <- SparkR::mutate(temp_df, PANEL = lit(1), ROW = lit(1), COL = lit(1),
+	                      SCALE_X = lit(1), SCALE_Y = lit(1))
+
+    temp_df <- select(temp_df, "PANEL", "ROW", "COL", "SCALE_X", "SCALE_Y")
+    temp_df
+  }
 }
 
 #' @export
 facet_map_layout.null <- function(facet, data, layout) {
   # Need the is.waive check for special case where no data, but aesthetics
   # are mapped to vectors
-  if (is.waive(data) || empty(data))
-    return(cbind(data, PANEL = integer(0)))
-  data$PANEL <- 1L
+  data_class <- class(data)
+
+  if(length(grep("DataFrame", data_class)) == 0) {
+    if (is.waive(data) || empty(data))
+      return(cbind(data, PANEL = integer(0)))
+    data$PANEL <- 1L
+  } else {
+    data <- withColumn(data, "PANEL", lit(1))
+  }
+  
   data
 }
 

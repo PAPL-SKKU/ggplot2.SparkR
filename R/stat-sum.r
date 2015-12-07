@@ -1,14 +1,23 @@
 #' Sum unique values.  Useful for overplotting on scatterplots.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("stat", "sum")}
-#'
 #' @inheritParams stat_identity
 #' @return a data.frame with additional columns
 #'  \item{n}{number of observations at position}
 #'  \item{prop}{percent of points in that panel at that position}
 #' @export
 #' @examples
+#' # Generate Spark DataFrame
+#' library(SparkR)
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' diamonds_df <- createDataFrame(sqlContext, diamonds)
+#'
+#' d <- ggplot(diamonds_ds, aes(cut, clarity))
+#' d + stat_sum()
+#'
+#' d + stat_sum() +
+#'   scale_size_area()
+#'
 #' d <- ggplot(diamonds, aes(x = cut, y = clarity))
 #' d + stat_sum()
 #'
@@ -46,6 +55,20 @@ StatSum <- proto(Stat, {
   required_aes <- c("x", "y")
   default_geom <- function(.) GeomPoint
 
+  calculate_groups.SparkR <- function(., data, scales, ...) {
+    if(length(grep("fill", columns(data)))) {
+      counts <- SparkR::count(groupBy(data, "PANEL", "x", "y", "fill"))
+    } else {
+      counts <- SparkR::count(groupBy(data, "PANEL", "x", "y"))
+    }
+
+    counts <- SparkR::rename(counts, n = counts$count)
+    counts <- withColumn(counts, "prop", counts$n^(-1))
+    counts <- select(counts, "PANEL", "x", "y", "n", "prop")
+
+    counts
+  }
+
   calculate_groups <- function(., data, scales, ...) {
 
     if (is.null(data$weight)) data$weight <- 1
@@ -55,6 +78,7 @@ StatSum <- proto(Stat, {
     counts <- count(data, group_by, wt_var = "weight")
     counts <- rename(counts, c(freq = "n"), warn_missing = FALSE)
     counts$prop <- ave(counts$n, counts$group, FUN = prop.table)
+
     counts
   }
 })

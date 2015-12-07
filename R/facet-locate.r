@@ -7,7 +7,7 @@ locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE)
   if (empty(data)) {
     return(cbind(data, PANEL = integer(0)))
   }
-
+  
   rows <- as.quoted(rows)
   cols <- as.quoted(cols)
   vars <- c(names(rows), names(cols))
@@ -16,9 +16,8 @@ locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE)
   margin_vars <- list(intersect(names(rows), names(data)),
     intersect(names(cols), names(data)))
   data <- add_margins(data, margin_vars, margins)
-
   facet_vals <- quoted_df(data, c(rows, cols))
-
+  
   # If any facetting variables are missing, add them in by
   # duplicating the data
   missing_facets <- setdiff(vars, names(facet_vals))
@@ -46,8 +45,34 @@ locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE)
 
     data$PANEL <- panels$PANEL[match(keys$x, keys$y)]
   }
-
+  
   data[order(data$PANEL), , drop = FALSE]
+}
+
+locate_grid.SparkR <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE) {
+  rows_char <- as.character(rows)
+  cols_char <- as.character(cols)
+  
+  rows_is_null <- length(rows_char) == 0
+  cols_is_null <- length(cols_char) == 0
+
+  # Add PANEL variable 
+  if(!rows_is_null && !cols_is_null) {
+    panels <- SparkR::rename(panels, row_old = panels[[rows_char]], col_old = panels[[cols_char]])
+
+    data <- SparkR::join(panels, data, 
+    			 panels$row_old == data[[rows_char]] &
+			 panels$col_old == data[[cols_char]], "inner")
+  } else if(!rows_is_null) {
+    panels <- withColumnRenamed(panels, eval(rows_char), "row_old")
+    data <- SparkR::join(panels, data, panels$row_old == data[[rows_char]], "inner")
+  } else if(!cols_is_null) {
+    panels <- withColumnRenamed(panels, eval(cols_char), "col_old")
+    data <- SparkR::join(panels, data, panels$col_old == data[[cols_char]], "inner")
+  }
+
+  # Return with unnessary columns (col_old, row_old, COL, ROW)
+  data
 }
 
 locate_wrap <- function(data, panels, vars) {
@@ -77,4 +102,13 @@ locate_wrap <- function(data, panels, vars) {
 
   data$PANEL <- panels$PANEL[match(keys$x, keys$y)]
   data[order(data$PANEL), ]
+}
+
+locate_wrap.SparkR <- function(data, panels, vars) {
+  vars <- as.character(unlist(vars))
+  panels <- withColumnRenamed(panels, eval(vars), "init")
+
+  data <- SparkR::join(data, panels, data[[eval(vars)]] == panels$init, "inner")
+
+  data
 }

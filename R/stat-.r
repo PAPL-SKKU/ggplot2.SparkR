@@ -33,23 +33,27 @@ Stat <- proto(TopLevel, expr={
     # stats <- merge(stats, unique, by = "group")
     # stats[stats$ORDER, ]
 
-    groups <- split(data, data$group)
-    stats <- lapply(groups, function(group)
-      .$calculate(data = group, scales = scales, ...))
+    if(!is.null(scales)) {
+      groups <- split(data, data$group)
+      stats <- lapply(groups, function(group)
+        .$calculate(data = group, scales = scales, ...))
 
-    stats <- mapply(function(new, old) {
-      if (empty(new)) return(data.frame())
-      unique <- uniquecols(old)
-      missing <- !(names(unique) %in% names(new))
-      cbind(
-        new,
-        unique[rep(1, nrow(new)), missing,drop=FALSE]
-      )
-    }, stats, groups, SIMPLIFY=FALSE)
+      stats <- mapply(function(new, old) {
+        if (empty(new)) return(data.frame())
+        unique <- uniquecols(old)
+        missing <- !(names(unique) %in% names(new))
+        cbind(new, unique[rep(1, nrow(new)), missing,drop=FALSE])
+      }, stats, groups, SIMPLIFY=FALSE)
 
-    do.call(rbind.fill, stats)
+      do.call(rbind.fill, stats)
+    } else {
+      .$calculate.SparkR(data = data, ...)
+    }
   }
 
+  calculate_groups.SparkR <- function(., data, scales, ...) {
+    .$calculate.SparkR(data = data, ...)
+  }
 
   pprint <- function(., newline=TRUE) {
     cat("stat_", .$objname ,": ", sep="") # , clist(.$parameters())
@@ -66,5 +70,4 @@ Stat <- proto(TopLevel, expr={
   new <- function(., mapping=aes(), data=NULL, geom=NULL, position=NULL, ...){
     do.call("layer", list(mapping=mapping, data=data, geom=geom, stat=., position=position, ...))
   }
-
 })

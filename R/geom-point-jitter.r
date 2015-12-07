@@ -4,9 +4,6 @@
 #' 'jitter'. It's a useful way of handling overplotting caused by discreteness
 #' in smaller datasets.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "jitter")}
-#'
 #' @inheritParams geom_point
 #' @inheritParams position_jitter
 #' @seealso

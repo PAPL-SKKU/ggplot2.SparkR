@@ -1,4 +1,4 @@
 library(testthat)
-library(ggplot2)
+library(ggplot2.SparkR)
 
-test_package("ggplot2")
+test_package("ggplot2.SparkR")

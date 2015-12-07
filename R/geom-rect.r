@@ -1,8 +1,5 @@
 #' 2d rectangles.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "rect")}
-#'
 #' @inheritParams geom_point
 #' @export
 #' @examples

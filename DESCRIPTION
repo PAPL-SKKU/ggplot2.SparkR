@@ -1,20 +1,17 @@
-Package: ggplot2
+Package: ggplot2.SparkR
 Type: Package
-Title: An Implementation of the Grammar of Graphics
-Version: 1.0.1.9000
+Title: Rebooting ggplot2 for Scalable Big Data Visualization
+Version: 0.9
 Authors@R: c(
-    person("Hadley", "Wickham", role = c("aut", "cre"), email = "h.wickham@gmail.com"),
-    person("Winston", "Chang", role = "aut", email = "winston@stdout.org")
+    person("Jong Hyun", "Bae", role = c("aut", "cre"), email = "bnbbkr@gmail.com"),
+    person("Moon Kyung", "Kim", role = "aut", email = "moonkyung1990@gmail.com"),
+    person("Jae W.", "Lee", role = "aut", email = "jaewlee@skku.edu"),
+    person("Sang Oh", "Jeong", role = "aut", email = "sangoh.jeong@sk.com")
     )
-Description: An implementation of the grammar of graphics
-    in R. It combines the advantages of both base and
-    lattice graphics: conditioning and shared axes are
-    handled automatically, and you can still build up a
-    plot step by step from multiple data sources. It also
-    implements a sophisticated multidimensional
-    conditioning system and a consistent interface to map
-    data to aesthetic attributes. See http://ggplot2.org
-    for more information, documentation and examples.
+Description: An R package for scalable visualization of big data represented
+    in Spark DataFrame. ggplot2.SparkR is an extension to the original ggplot2
+    package and can seamlessly handle both R data.frame and Spark DataFrame with no
+    modifications to the original API.
 Depends:
     R (>= 2.14),
     stats,
@@ -44,8 +41,8 @@ VignetteBuilder: knitr
 Enhances: sp
 Roxygen: list(wrap = FALSE)
 License: GPL-2
-URL: http://ggplot2.org, https://github.com/hadley/ggplot2
-BugReports: https://github.com/hadley/ggplot2/issues
+URL: https://github.com/PAPL-SKKU/ggplot2.SparkR
+BugReports: https://github.com/PAPL-SKKU/ggplot2.SparkR/issues
 LazyData: true
 Collate:
     'aaa-.r'
@@ -138,6 +135,7 @@ Collate:
     'layer.r'
     'limits.r'
     'panel.r'
+    'plot-SparkR.r'
     'plot-build.r'
     'plot-construction.r'
     'plot-last.r'
@@ -216,3 +214,11 @@ Collate:
     'xxx-digest.r'
     'zxx.r'
     'zzz.r'
+RoxygenNote: 5.0.1
+NeedsCompilation: no
+Packaged: 2015-12-07 00:12:32 UTC; jonghyun
+Author: Jong Hyun Bae [aut, cre],
+    Moon Kyung Kim [aut],
+    Jae W. Lee [aut],
+    Sang Oh Jeong [aut]
+Maintainer: Jong Hyun Bae <bnbbkr@gmail.com>

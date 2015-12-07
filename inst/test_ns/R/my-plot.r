@@ -1,7 +1,7 @@
 #' Create a plot.
 #'
 #' @export
-#' @import ggplot2
+#' @import ggplot2.SparkR
 #' @examples
 #' plot(my_plot())
 my_plot <- function() {

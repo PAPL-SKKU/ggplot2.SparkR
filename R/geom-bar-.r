@@ -34,9 +34,6 @@
 #' \href{http://www.b-eye-network.com/view/index.php?cid=2468}{article on this topic}.
 #' This is the reason it doesn't make sense to use a log-scaled y axis with a bar chart
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "bar")}
-#'
 #' @seealso \code{\link{stat_bin}} for more details of the binning algorithm,
 #'   \code{\link{position_dodge}} for creating side-by-side barcharts,
 #'   \code{\link{position_stack}} for more info on stacking,
@@ -44,6 +41,42 @@
 #' @inheritParams geom_point
 #' @examples
 #' \donttest{
+#' # Generate Spark DataFrame
+#' library(SparkR)
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' diamonds_df <- createDataFrame(sqlContext, diamonds)
+#'
+#' # By default, uses stat = "bin", which gives the count in each category
+#' g <- ggplot(diamonds_df, aes(cut))
+#' g + geom_bar()
+#' g + geom_bar(width = 0.5_
+#' g + geom_bar() + coord_flip()
+#' g + geom_bar(fill = "white", colour = "darkgreen")
+#'
+#' # Stacked bar charts
+#' g + geom_bar(aes(fill = color))
+#' g + geom_bar(aes(fill = clarity))
+#' 
+#' ggplot(diamonds_df, aes(clarity, fill = cut)) +
+#'   geom_bar()
+#' ggplot(diamonds_df, aes(color, fill = cut)) +
+#'   geom_bar() +
+#'   coord_flip()
+#'
+#' # Faceting is a good alternative:
+#' ggplot(diamonds_df, aes(color, fill = cut)) +
+#'   geom_bar() +
+#'   facet_wrap(~ cut)
+#'
+#' # Dodged bar charts
+#' ggplot(diamonds_df, aes(clarity, fill = cut)) +
+#'   geom_bar(position = "dodge")
+#' # compare with
+#' ggplot(diamonds_df, aes(cut, fill = cut)) +
+#'   geom_bar() +
+#'   facet_grid(. ~ clarity)
+#'
 #' # Generate data
 #' g <- ggplot(mtcars, aes(factor(cyl)))
 #'
@@ -142,6 +175,11 @@ GeomBar <- proto(Geom, {
   default_aes <- function(.) aes(colour=NA, fill="grey20", size=0.5, linetype=1, weight = 1, alpha = NA)
 
   required_aes <- c("x")
+
+  reparameterise.SparkR <- function(., df, params) {
+    SparkR::mutate(df, ymin = lit(0), ymax = df$y,
+		   xmin = df$x - (df$width / 2), xmax = df$x + (df$width / 2))
+  }
 
   reparameterise <- function(., df, params) {
     df$width <- df$width %||%
