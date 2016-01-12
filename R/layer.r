@@ -32,11 +32,12 @@ Layer <- proto(expr = {
       show_guide = FALSE
     }
 
-
     if (is.null(geom) && is.null(stat)) stop("Need at least one of stat and geom")
 
     data <- fortify(data)
-    if (!is.null(mapping) && !inherits(mapping, "uneval")) stop("Mapping should be a list of unevaluated mappings created by aes or aes_string")
+    if (!is.null(mapping) && !inherits(mapping, "uneval")) {
+      stop("Mapping should be a list of unevaluated mappings created by aes or aes_string")
+    }
 
     if (is.character(geom)) geom <- Geom$find(geom)
     if (is.character(stat)) stat <- Stat$find(stat)
@@ -129,7 +130,26 @@ Layer <- proto(expr = {
     .$position$print()
   }
 
+  compute_aesthetics.SparkR <- function(., data, plot) {
+    aesthetics <- .$layer_mapping(plot$mapping)
+    values <- as.character(unlist(aesthetics))
+    keys <- names(aesthetics)
+    data <- select(data, append(as.list(values), "PANEL"))
 
+    for(index in 1:length(keys)) {
+      if(keys[index] == "group") keys[index] <- "grouped"
+      data <- withColumnRenamed(data, values[index], keys[index])
+    }
+
+    if(!is.null(.$geom_params$group)) {
+      aesthetics["group"] <- .$geom_params$group
+    }
+
+    scales_add_defaults(plot$scales, data, aesthetics, plot$plot_env)
+ 
+    data
+  }
+ 
   compute_aesthetics <- function(., data, plot) {
     aesthetics <- .$layer_mapping(plot$mapping)
 
@@ -144,7 +164,7 @@ Layer <- proto(expr = {
     }
 
     scales_add_defaults(plot$scales, data, aesthetics, plot$plot_env)
-
+    
     # Evaluate aesthetics in the context of their data frame
     evaled <- compact(
       eval.quoted(aesthetics, data, plot$plot_env))
@@ -167,7 +187,6 @@ Layer <- proto(expr = {
     data.frame(evaled)
   }
 
-
   calc_statistic <- function(., data, scales) {
     if (empty(data)) return(data.frame())
 
@@ -176,16 +195,47 @@ Layer <- proto(expr = {
       paste("stat_", .$stat$objname, sep=""))
 
     res <- NULL
-    try(res <- do.call(.$stat$calculate_groups, c(
-      list(data=as.name("data"), scales=as.name("scales")),
-      .$stat_params)
-    ))
-    if (is.null(res)) return(data.frame())
 
+    if(!is.null(scales)) {
+      try(res <- do.call(.$stat$calculate_groups, c(
+        list(data=as.name("data"), scales=as.name("scales")),
+        .$stat_params)
+      ))
+
+      if (is.null(res)) return(data.frame())
+    } else {
+      try(res <- do.call(.$stat$calculate_groups.SparkR,
+			 c(list(data = as.name("data"), scales = as.name("scales")), .$stat_params)))
+
+      if(is.null(res)) {
+        stop("Maybe something wrong in calcaulate_groups.", call. = FALSE)
+      }
+    }
+ 
     res
-
   }
 
+  map_statistic.SparkR <- function(., data, plot) {
+    aesthetics <- .$mapping
+
+    # Assemble aesthetics from layer, plot and stat mappings
+    if(.$inherit.aes) {
+      aesthetics <- defaults(aesthetics, plot$mapping)
+    }
+    aesthetics <- defaults(aesthetics, .$stat$default_aes())
+    aesthetics <- compact(aesthetics)
+
+    new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
+
+    if(length(new) == 0) return(data)
+
+    # Add map stat output to aesthetics
+    data <- withColumn(data, names(new), data[[as.character(new)]])
+    # Add any new scales, if needed
+    scales_add_defaults(plot$scales, data, new, plot$plot_env)
+
+    data
+  }
 
   map_statistic <- function(., data, plot) {
     if (empty(data)) return(data.frame())
@@ -199,6 +249,7 @@ Layer <- proto(expr = {
     aesthetics <- compact(aesthetics)
 
     new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
+ 
     if (length(new) == 0) return(data)
 
     # Add map stat output to aesthetics
@@ -207,6 +258,7 @@ Layer <- proto(expr = {
 
     # Add any new scales, if needed
     scales_add_defaults(plot$scales, data, new, plot$plot_env)
+
     # Transform the values, if the scale say it's ok
     # (see stat_spoke for one exception)
     if (.$stat$retransform) {
@@ -216,11 +268,15 @@ Layer <- proto(expr = {
     cunion(stat_data, data)
   }
 
+  reparameterise.SparkR <- function(., data) {
+    if(is.null(data)) stop("data is empty.", call. = FALSE)
+    .$geom$reparameterise.SparkR(data, .$geom_params)
+  }
+
   reparameterise <- function(., data) {
     if (empty(data)) return(data.frame())
     .$geom$reparameterise(data, .$geom_params)
   }
-
 
   adjust_position <- function(., data) {
     ddply(data, "PANEL", function(data) {

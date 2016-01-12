@@ -29,7 +29,7 @@ is.facet <- function(x) inherits(x, "facet")
 facet_train_layout <- function(facet, data)
   UseMethod("facet_train_layout")
 
-facet_map_layout <- function(facet, data, layout)
+facet_map_layout <- function(facet, data, layout, plot = NULL)
   UseMethod("facet_map_layout")
 
 facet_render <- function(facet, panels_grob, coord, theme, geom_grobs)

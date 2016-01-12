@@ -193,11 +193,43 @@ print.ggplot <- function(x, newpage = is.null(vp), vp = NULL, ...) {
 
   invisible(data)
 }
+
+#' Draw plot on currernt graphics device with Spark DataFrame.
+#' 
+#' @param x plot to display that has Spark DataFrame
+#' @param newpage draw new (empty) page first?
+#' @param vp viewport to draw plot in
+#' @param ... other arguments not used by this method
+#' @keywords hplot
+#' @export
+#' @method print ggplot.SparkR
+print.ggplot.SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
+  set_last_plot(x)
+  if(newpage) grid.newpage()
+ 
+  data <- ggplot_build.SparkR(x)
+
+  gtable <- ggplot_gtable(data)
+  if(is.null(vp)) {
+     grid.draw(gtable)
+  } else {
+    if (is.character(vp)) seekViewport(vp) else pushViewport(vp)
+    grid.draw(gtable)
+    upViewport()
+  }
+
+  invisible(data)
+}
+
 #' @rdname print.ggplot
 #' @method plot ggplot
 #' @export
 plot.ggplot <- print.ggplot
 
+#' @rdname print.ggplot.SparkR
+#' @method plot ggplot.SparkR
+#' @export
+plot.ggplot.SparkR <- print.ggplot.SparkR
 
 #' Generate a ggplot2 plot grob.
 #'

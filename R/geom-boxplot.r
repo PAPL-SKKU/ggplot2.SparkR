@@ -16,9 +16,6 @@
 #' This gives a roughly 95% confidence interval for comparing medians.
 #' See McGill et al. (1978) for more details.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "boxplot")}
-#'
 #' @seealso \code{\link{stat_quantile}} to view quantiles conditioned on a
 #'   continuous variable,  \code{\link{geom_jitter}} for another way to look
 #'   at conditional distributions"
@@ -37,10 +34,8 @@
 #'    square-roots of the number of observations in the groups (possibly
 #'    weighted, using the \code{weight} aesthetic).
 #' @export
-#'
 #' @references McGill, R., Tukey, J. W. and Larsen, W. A. (1978) Variations of
 #'     box plots. The American Statistician 32, 12-16.
-#'
 #' @examples
 #' \donttest{
 #' p <- ggplot(mtcars, aes(factor(cyl), mpg))
@@ -155,6 +150,19 @@ GeomBoxplot <- proto(Geom, {
     if (!is.null(df$relvarwidth)) df$relvarwidth <- NULL
 
     df
+  }
+
+  reparameterise.SparkR <- function(., df, params) {
+    # if `varwidth` not requested or not available, don't use it
+    if(is.null(params) || is.null(params$varwidth) ||
+      !params$varwidth || length(grep("relvarwidth", columns(data))) == 0) {
+      SparkR::mutate(df, xmin = df$x - df$width / 2, xmax = df$x + df$width / 2)
+    } else {
+      # make `relvarwidth` relative to the size of the largest group
+      max_relvarwidth <- collect(select(df, max(df$relvarwidth)))[[1]]
+      SparkR::mutate(df, xmin = df$x - (df$relvarwidth * df$width) / (2 * max_relvarwidth),
+                     xmax = df$x + (df$relvarwidth * df$width) / (2 * max_relvarwidth))
+    }
   }
 
   draw <- function(., data, ..., fatten = 2, outlier.colour = NULL, outlier.shape = NULL, outlier.size = 2,

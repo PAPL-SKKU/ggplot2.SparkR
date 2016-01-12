@@ -70,6 +70,7 @@ pos_stack <- function(df, width) {
   df$ymin <- heights[-n]
   df$ymax <- heights[-1]
   df$y <- df$ymax
+  
   df
 }
 
@@ -103,7 +104,7 @@ pos_dodge <- function(df, width) {
   # Have a new group index from 1 to number of groups.
   # This might be needed if the group numbers in this set don't include all of 1:n
   groupidx <- match(df$group, sort(unique(df$group)))
-
+  
   # Find the center for each group, then use that to calculate xmin and xmax
   df$x <- df$x + width * ((groupidx - 0.5) / n - .5)
   df$xmin <- df$x - d_width / n / 2

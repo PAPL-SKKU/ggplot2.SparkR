@@ -4,8 +4,6 @@
 #' @aliases group order
 #'
 #' @examples
-#' \donttest{
-#'
 #' # By default, the group is set to the interaction of all discrete variables in the
 #' # plot. This often partitions the data correctly, but when it does not, or when
 #' # no discrete variable is used in the plot, you will need to explicitly define the
@@ -89,5 +87,4 @@
 #' d <- ggplot(diamonds, aes(carat, price, colour = cut))
 #' d + geom_point()
 #' d + geom_point(aes(order = sample(seq_along(carat))))
-#' }
 NULL

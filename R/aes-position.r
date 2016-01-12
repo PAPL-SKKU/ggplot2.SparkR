@@ -6,6 +6,7 @@
 #' @name aes_position
 #' @aliases x y xmin xmax ymin ymax xend yend
 #' @examples
+#' \donttest{
 #'
 #' # Generate data: means and standard errors of means for prices
 #' # for each type of cut
@@ -45,4 +46,5 @@
 #'
 #' ggplot(counts, aes(x, Freq)) +
 #'   geom_segment(aes(yend = 0, xend = x), size = 10)
+#' }
 NULL

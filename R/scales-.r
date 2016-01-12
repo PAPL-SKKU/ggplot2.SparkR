@@ -72,6 +72,27 @@ scales_transform_df <- function(scales, df) {
   quickdf(c(transformed, df[setdiff(names(df), names(transformed))]))
 }
 
+scales_transform_df.SparkR <- function(scales, data) { 
+  for(index in 1:length(scales$scales)) {
+    scale_type <- scales$scales[[index]]$trans$name
+    done <- scales$scales[[index]]$trans$done
+    scale_aes <- scales$scales[[index]]$aesthetics[1]
+ 
+    for(col_list in columns(data)) {
+      if(scale_aes == col_list && !is.null(scale_type) && is.null(done)) {
+        scale_aes_old <- paste0(scale_aes, "_OLD")
+ 
+        if(scale_type == "log-10") {
+          data <- withColumnRenamed(data, scale_aes, scale_aes_old)
+          data <- withColumn(data, scale_aes, log10(data[[scale_aes_old]])) 
+        }
+        scales$scales[[index]]$trans$done <- TRUE
+      }
+    }
+  }
+  data
+}
+
 # @param aesthetics A list of aesthetic-variable mappings. The name of each
 #   item is the aesthetic, and the value of each item is the variable in data.
 scales_add_defaults <- function(scales, data, aesthetics, env) {
@@ -79,25 +100,46 @@ scales_add_defaults <- function(scales, data, aesthetics, env) {
   names(aesthetics) <- unlist(lapply(names(aesthetics), aes_to_scale))
 
   new_aesthetics <- setdiff(names(aesthetics), scales$input())
+ 
   # No new aesthetics, so no new scales to add
   if (is.null(new_aesthetics)) return()
 
-  datacols <- tryapply(
-    aesthetics[new_aesthetics], eval,
-    envir = data, enclos = env
-  )
+  if(length(grep("DataFrame", class(data))) == 0) {
+    datacols <- tryapply(
+      aesthetics[new_aesthetics], eval,
+      envir = data, enclos = env
+    )
 
-  for(aes in names(datacols)) {
-    type <- scale_type(datacols[[aes]])
-    scale_name <- paste("scale", aes, type, sep="_")
+    for(aes in names(datacols)) {
+      type <- scale_type(datacols[[aes]])
+      scale_name <- paste("scale", aes, type, sep="_")
 
-    # Skip aesthetics with no scales (e.g. group, order, etc)
-    scale_f <- find_global(scale_name, env, mode = "function")
-    if (is.null(scale_f)) next
+      # Skip aesthetics with no scales (e.g. group, order, etc)
+      scale_f <- find_global(scale_name, env, mode = "function")
+      if (is.null(scale_f)) next
+     
+      scales$add(scale_f())
+    }
+  } else {
+    datacols <- new_aesthetics
+    type_arr <- unlist(dtypes(data))
+    
+    for(aes in datacols) {
+      type_col <- type_arr[grep(aes, type_arr) + 1]
+      if(type_col == "string" || type_col == "boolean") {
+        type <- "discrete"
+      } else {
+        type <- "continuous"
+      }
 
-    scales$add(scale_f())
+      scale_name <- paste("scale", aes, type, sep = "_")
+      scale_f <- find_global(scale_name, env, mode = "function")
+
+      if (is.null(scale_f)) next
+
+      scales$add(scale_f())
+    }
   }
-
 }
 
 # Add missing but required scales.
@@ -115,7 +157,6 @@ scales_add_missing <- function(plot, aesthetics, env) {
   }
 }
 
-
 # Look for object first in parent environment and if not found, then in
 # ggplot2 namespace environment.  This makes it possible to override default
 # scales by setting them in the parent environment.
@@ -124,14 +165,13 @@ find_global <- function(name, env, mode = "any") {
     return(get(name, envir = env, mode = mode))
   }
 
-  nsenv <- asNamespace("ggplot2")
+  nsenv <- asNamespace("ggplot2.SparkR")
   if (exists(name, envir = nsenv, mode = mode)) {
     return(get(name, envir = nsenv, mode = mode))
   }
 
   NULL
 }
-
 
 # Determine default type of a scale
 scale_type <- function(x) UseMethod("scale_type")

@@ -41,8 +41,8 @@ Geom <- proto(TopLevel, expr={
 
   reparameterise <- function(., data, params) data
 
+  reparameterise.SparkR <- function(., data, params) data
+
   # Html documentation ----------------------------------
-
-
 
 })

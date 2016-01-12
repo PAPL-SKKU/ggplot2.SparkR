@@ -1,12 +1,21 @@
 #' Frequency polygon.
 #'
-#' @section Aesthetics:
-#' \Sexpr[results=rd,stage=build]{ggplot2:::rd_aesthetics("geom", "freqpoly")}
-#'
 #' @seealso \code{\link{geom_histogram}}: histograms
 #' @inheritParams geom_point
 #' @export
 #' @examples
+#' # If you use Spark DataFrame, you can use only
+#' # factor variable in freqpoly graphs
+#'
+#' # Generate Spark DataFrame
+#' library(SparkR)
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' diamonds_df <- createDataFrame(sqlContext, diamonds)
+#' 
+#' m <- ggplot(diamodns_df, aes(cut))
+#' m + geom_freqpoly(binwidth = 0.1)
+#'
 #' m <- ggplot(diamonds, aes(carat))
 #' m + geom_freqpoly(binwidth = 0.1)
 #' m + geom_freqpoly(binwidth = 0.01)
