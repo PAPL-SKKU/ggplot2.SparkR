@@ -80,7 +80,8 @@ ggplot_build <- function(plot) {
  
   # Train coordinate system
   panel <- train_ranges(panel, plot$coordinates)
- 
+  print(data)
+
   list(data = data, panel = panel, plot = plot)
 }
 
@@ -141,7 +142,7 @@ ggplot_build.SparkR <- function(plot) {
   if(length(data[[1]]) == 2) {
      outliers <- data[[1]][[1]]
      data[[1]] <- data[[1]][[2]]
-  } 
+  }
   data <- dlapply(function(d, p) p$map_statistic.SparkR(d, plot))
 
   # Make sure missing (but required) aesthetics are added

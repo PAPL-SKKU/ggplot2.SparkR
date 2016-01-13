@@ -168,10 +168,10 @@ bin.SparkR <- function(data, binwidth=NULL, origin=NULL, breaks=NULL, range=NULL
   			   ncount = data$count / data$max_count,
   			   width = lit(width[1]), y = data$count)
 
-    max_density <- select(data, max(abs(data$density)))
-    max_density <- SparkR::rename(max_density, max_density = max_density[[1]])
+    max_density <- collect(select(data, data$density))
+    max_density <- max(max_density$density)
 
-    data <- SparkR::join(data, max_density)
+    data <- withColumn(data, "max_density", lit(max_density))
     data <- withColumn(data, "ndensity", data$density / data$max_density)
   }
 
