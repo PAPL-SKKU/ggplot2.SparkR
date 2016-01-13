@@ -80,7 +80,6 @@ ggplot_build <- function(plot) {
  
   # Train coordinate system
   panel <- train_ranges(panel, plot$coordinates)
-  print(data)
 
   list(data = data, panel = panel, plot = plot)
 }
