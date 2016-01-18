@@ -16,13 +16,7 @@ Find out more at <http://papl-skku.github.io/ggplot2.SparkR/>
 
 ## Installation
 
-Get the released version from CRAN: //after release
-
-```R
-install.packages("ggplot2.SparkR")
-```
-
-Or the development version from github: //after release
+Get the development version from github: 
 
 ```R
 # install.packages("devtools")
