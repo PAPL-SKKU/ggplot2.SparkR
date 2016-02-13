@@ -20,7 +20,7 @@ Get the development version from github:
 
 ```R
 # install.packages("devtools")
-devtools::install_github("PAPL-SKKU/ggplot2.SparkR")
+devtools::install_github("SKKU-SKT/ggplot2.SparkR")
 ```
 
 ## Mailing list
