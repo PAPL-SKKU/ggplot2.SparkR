@@ -1,5 +1,5 @@
-#' Create a new layer
-#'
+# Create a new layer
+#
 #' @export
 layer_SparkR <- function(geom = NULL, stat = NULL,
 			 data = NULL, mapping = NULL,

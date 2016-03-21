@@ -1,8 +1,6 @@
-#' Box and whiskers plot.
-#'
+# Box and whiskers plot.
+#
 #' @export
-#' @references McGill, R., Tukey, J. W. and Larsen, W. A. (1978) Variations of
-#'     box plots. The American Statistician 32, 12-16.
 geom_boxplot <- function(mapping = NULL, data = NULL, stat = "boxplot",
                          position = "dodge", outlier.colour = NULL,
                          outlier.shape = 19, outlier.size = 1.5,
@@ -54,9 +52,9 @@ geom_boxplot <- function(mapping = NULL, data = NULL, stat = "boxplot",
   return(list(layer1, layer2))
 }
 
-#' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
+# @rdname ggplot2-ggproto
+# @format NULL
+# @usage NULL
 #' @export
 GeomBoxplot_SparkR <- ggproto("GeomBoxplot_SparkR", GeomBoxplot,
   setup_data = function(data, params) {

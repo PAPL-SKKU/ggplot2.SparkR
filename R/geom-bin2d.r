@@ -1,5 +1,5 @@
-#' Add heatmap of 2d bin counts.
-#'
+# Add heatmap of 2d bin counts.
+#
 #' @export
 geom_bin2d <- function(mapping = NULL, data = NULL, stat = "bin2d",
                        position = "identity", na.rm = FALSE,

@@ -1,9 +1,9 @@
-#' Bars, rectangles with bases on x-axis
-#'
+# Bars, rectangles with bases on x-axis
+#
 #' @export
 geom_bar <- function(mapping = NULL, data = NULL, stat = "count",
-                    position = "stack", width = NULL, binwidth = NULL, ...,
-		    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) {
+                     position = "stack", width = NULL, binwidth = NULL, ...,
+	             na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) {
   layer1 <- layer(
     data = data,
     mapping = mapping,
@@ -37,9 +37,9 @@ geom_bar <- function(mapping = NULL, data = NULL, stat = "count",
   return(list(layer1, layer2))
 }
 
-#' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
+# @rdname ggplot2-ggproto
+# @format NULL
+# @usage NULL
 #' @export
 GeomBar_SparkR <- ggproto("GeomBar_SparkR", GeomBar,
   setup_data = function(data, params) {

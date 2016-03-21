@@ -1,6 +1,6 @@
-#' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
+# @rdname ggplot2-ggproto
+# @format NULL
+# @usage NULL
 #' @export
 Stat_SparkR <- ggproto("Stat_SparkR", Stat,
   retransform = TRUE,

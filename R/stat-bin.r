@@ -1,5 +1,5 @@
+# @rdname geom_histogram
 #' @export
-#' @rdname geom_histogram
 stat_bin <- function(mapping = NULL, data = NULL, geom = "bar",
                      position = "stack", width = 0.9, drop = FALSE,
                      right = FALSE, binwidth = NULL, bins = NULL, origin = NULL,
@@ -32,9 +32,9 @@ stat_bin <- function(mapping = NULL, data = NULL, geom = "bar",
   return(list(layer1, layer2))
 }
 
-#' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
+# @rdname ggplot2-ggproto
+# @format NULL
+# @usage NULL
 #' @export
 StatBin_SparkR <- ggproto("StatBin_SparkR", Stat_SparkR,
   required_aes = c("x"),

@@ -33,13 +33,13 @@ stat_sum <- function(mapping = NULL, data = NULL, geom = "point",
   return(list(layer1, layer2))
 }
 
-#' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
+# @rdname ggplot2-ggproto
+# @format NULL
+# @usage NULL
 #' @export
 StatSum_SparkR <- ggproto("StatSum_SparkR", Stat_SparkR,
-  default_aes = ggplot2::StatSum$default_aes,
-  required_aes = ggplot2::StatSum$required_aes,
+  default_aes = StatSum$default_aes,
+  required_aes = StatSum$required_aes,
 
   compute_group = function(data, scales) {
     counts <- SparkR::count(groupBy(data, "PANEL", "x", "y"))
