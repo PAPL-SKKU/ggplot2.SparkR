@@ -1,311 +1,166 @@
-# Create a new layer
-# Layer objects store the layer of an object.
-#
-# They have the following attributes:
-#
-#  * data
-#  * geom + parameters
-#  * statistic + parameters
-#  * position + parameters
-#  * aesthetic mapping
-#  * flag for display guide: TRUE/FALSE/NA. in the case of NA, decision depends on a guide itself.
-#
-# Can think about grob creation as a series of data frame transformations.
-Layer <- proto(expr = {
-  geom <- NULL
-  geom_params <- NULL
-  stat <- NULL
-  stat_params <- NULL
-  data <- NULL
-  mapping <- NULL
-  position <- NULL
-  params <- NULL
-  inherit.aes <- FALSE
+#' Create a new layer
+#'
+#' @export
+layer_SparkR <- function(geom = NULL, stat = NULL,
+			 data = NULL, mapping = NULL,
+			 position = NULL, params = list(),
+			 inherit.aes = TRUE, subset = NULL, show.legend = NA) {
+  # (TODO) Need to delete pre-processing part from here {
+  if (is.null(geom))
+    stop("Attempted to create layer with no geom.", call. = FALSE)
+  if (is.null(stat))
+    stop("Attempted to create layer with no stat.", call. = FALSE)
+  if (is.null(position))
+    stop("Attempted to create layer with no position.", call. = FALSE)
 
-  new <- function (., geom=NULL, geom_params=NULL, stat=NULL, stat_params=NULL, data=NULL, mapping=NULL, position=NULL, params=NULL, ..., inherit.aes = TRUE, subset = NULL, show_guide = NA) {
+  # Handle show_guide/show.legend
+  if (!is.null(params$show_guide)) {
+    warning("`show_guide` has been deprecated. Please use `show.legend` instead.",
+      call. = FALSE)
+    show.legend <- params$show_guide
+    params$show_guide <- NULL
+  }
+  if (!is.logical(show.legend) || length(show.legend) != 1) {
+    warning("`show.legend` must be a logical vector of length 1.", call. = FALSE)
+    show.legend <- FALSE
+  }
+  
+  data <- fortify(data)
+  if (!is.null(mapping) && !inherits(mapping, "uneval")) {
+    stop("Mapping must be created by `aes()` or `aes_()`", call. = FALSE)
+  }
+ 
+  if (is.character(geom))
+    geom <- ggplot2:::find_subclass("Geom", geom)
+  if (is.character(stat))
+    stat <- find_subclass_SparkR("Stat", stat)
+  if (is.character(position))
+    position <- ggplot2:::find_subclass("Position", position)
+   
+  # Split up params between aesthetics, geom, and stat
+  params <- ggplot2:::rename_aes(params)
 
-    # now, as for the guide, we can choose only if the layer is included or not in the guide: guide = TRUE or guide = FALSE
-    # in future, it may be better if we can choose which aes of this layer is included in the guide, e.g.: guide = c(colour = TRUE, size = FALSE)
+  aes_params  <- params[intersect(names(params), geom$aesthetics())]
+  geom_params <- params[intersect(names(params), geom$parameters(TRUE))]
+  stat_params <- params[intersect(names(params), stat$parameters(TRUE))]
 
-    if (!is.na(show_guide) && !is.logical(show_guide)) {
-      warning("`show_guide` in geom_XXX and stat_XXX must be logical.")
-      show_guide = FALSE
-    }
+  all <- c(geom$parameters(TRUE), stat$parameters(TRUE), geom$aesthetics())
+  extra <- setdiff(names(params), all)
+  if (length(extra) > 0) {
+    stop("Unknown parameters: ", paste(extra, collapse = ", "), call. = FALSE)
+  }
+  # } to here
 
-    if (is.null(geom) && is.null(stat)) stop("Need at least one of stat and geom")
+  ggproto("LayerInstance", Layer_SparkR,
+    geom = geom,
+    geom_params = geom_params,
+    stat = stat,
+    stat_params = stat_params,
+    data = data,
+    mapping = mapping,
+    aes_params = aes_params,
+    subset = subset,
+    position = position,
+    inherit.aes = inherit.aes,
+    show.legend = show.legend
+  )
+}
 
-    data <- fortify(data)
-    if (!is.null(mapping) && !inherits(mapping, "uneval")) {
-      stop("Mapping should be a list of unevaluated mappings created by aes or aes_string")
-    }
+Layer_SparkR <- ggproto("Layer", ggplot2:::Layer,
+  geom = NULL,
+  geom_params = NULL,
+  stat = NULL,
+  stat_params = NULL,
+  data = NULL,
+  aes_params = NULL,
+  mapping = NULL,
+  position = NULL,
+  inherit.aes = FALSE,
 
-    if (is.character(geom)) geom <- Geom$find(geom)
-    if (is.character(stat)) stat <- Stat$find(stat)
-    if (is.character(position)) position <- Position$find(position)$new()
-
-    if (is.null(geom)) geom <- stat$default_geom()
-    if (is.null(stat)) stat <- geom$default_stat()
-    if (is.null(position)) position <- geom$default_pos()$new()
-
-    match.params <- function(possible, params) {
-      if ("..." %in% names(possible)) {
-        params
-      } else {
-        params[match(names(possible), names(params), nomatch=0)]
-      }
-    }
-
-    if (is.null(geom_params) && is.null(stat_params)) {
-      params <- c(params, list(...))
-      params <- rename_aes(params) # Rename American to British spellings etc
-
-      geom_params <- match.params(geom$parameters(), params)
-      stat_params <- match.params(stat$parameters(), params)
-      stat_params <- stat_params[setdiff(names(stat_params),
-        names(geom_params))]
+  compute_aesthetics_SparkR = function(self, data, plot) {
+    if(self$inherit.aes) {
+      aesthetics <- defaults(self$mapping, plot$mapping)
     } else {
-      geom_params <- rename_aes(geom_params)
+      aesthetics <- self$mapping
     }
 
-    proto(.,
-      geom=geom, geom_params=geom_params,
-      stat=stat, stat_params=stat_params,
-      data=data, mapping=mapping, subset=subset,
-      position=position,
-      inherit.aes = inherit.aes,
-      show_guide = show_guide,
-    )
-  }
-
-  clone <- function(.) as.proto(.$as.list(all.names=TRUE))
-
-  use_defaults <- function(., data) {
-    df <- aesdefaults(data, .$geom$default_aes(), NULL)
-
-    # Override mappings with atomic parameters
-    gp <- intersect(c(names(df), .$geom$required_aes), names(.$geom_params))
-    gp <- gp[unlist(lapply(.$geom_params[gp], is.atomic))]
-
-    # Check that mappings are compatable length: either 1 or the same length
-    # as the data
-    param_lengths <- vapply(.$geom_params[gp], length, numeric(1))
-    bad <- param_lengths != 1L & param_lengths != nrow(df)
-    if (any(bad)) {
-      stop("Incompatible lengths for set aesthetics: ",
-        paste(names(bad), collapse = ", "), call. = FALSE)
-    }
-
-    df[gp] <- .$geom_params[gp]
-    df
-  }
-
-  layer_mapping <- function(., mapping = NULL) {
-    # For certain geoms, it is useful to be able to ignore the default
-    # aesthetics and only use those set in the layer
-    if (.$inherit.aes) {
-      aesthetics <- compact(defaults(.$mapping, mapping))
-    } else {
-      aesthetics <- .$mapping
-    }
-
-    # Drop aesthetics that are set or calculated
-    set <- names(aesthetics) %in% names(.$geom_params)
-    calculated <- is_calculated_aes(aesthetics)
-
-    aesthetics[!set & !calculated]
-  }
-
-  pprint <- function(.) {
-    if (is.null(.$geom)) {
-      cat("Empty layer\n")
-      return(invisible());
-    }
-    if (!is.null(.$mapping)) {
-      cat("mapping:", clist(.$mapping), "\n")
-    }
-    .$geom$print(newline=FALSE)
-    cat(clist(.$geom_params), "\n")
-    .$stat$print(newline=FALSE)
-    cat(clist(.$stat_params), "\n")
-    .$position$print()
-  }
-
-  compute_aesthetics.SparkR <- function(., data, plot) {
-    aesthetics <- .$layer_mapping(plot$mapping)
     values <- as.character(unlist(aesthetics))
     keys <- names(aesthetics)
     data <- select(data, append(as.list(values), "PANEL"))
 
     for(index in 1:length(keys)) {
-      if(keys[index] == "group") keys[index] <- "grouped"
       data <- withColumnRenamed(data, values[index], keys[index])
     }
 
-    if(!is.null(.$geom_params$group)) {
-      aesthetics["group"] <- .$geom_params$group
+    if(!is.null(self$geom_params$group)) {
+      aesthetics["group"] <- self$aes_params$group
     }
+    scales_add_defaults_SparkR(plot$scales, data, aesthetics, plot$plot_env)
 
-    scales_add_defaults(plot$scales, data, aesthetics, plot$plot_env)
- 
+    data <- add_group_SparkR(data)
     data
-  }
- 
-  compute_aesthetics <- function(., data, plot) {
-    aesthetics <- .$layer_mapping(plot$mapping)
+  },
 
-    if (!is.null(.$subset)) {
-      include <- data.frame(eval.quoted(.$subset, data, plot$env))
-      data <- data[rowSums(include, na.rm = TRUE) == ncol(include), ]
+  compute_statistic_SparkR = function(self, data, panel) {
+    empty <- function(data) {
+      is.null(data) || nrow(data) == 0 || ncol(data) == 0
     }
+    if(empty(data)) return(NULL)
 
-    # Override grouping if set in layer.
-    if (!is.null(.$geom_params$group)) {
-      aesthetics["group"] <- .$geom_params$group
-    }
+    params <- self$stat$setup_params(data, self$stat_params)
+    data <- self$stat$setup_data(data, params)
+    self$stat$compute_layer(data, params, panel)
+  },
 
-    scales_add_defaults(plot$scales, data, aesthetics, plot$plot_env)
-    
-    # Evaluate aesthetics in the context of their data frame
-    evaled <- compact(
-      eval.quoted(aesthetics, data, plot$plot_env))
-
-    lengths <- vapply(evaled, length, integer(1))
-    n <- if (length(lengths) > 0) max(lengths) else 0
-
-    wrong <- lengths != 1 & lengths != n
-    if (any(wrong)) {
-      stop("Aesthetics must either be length one, or the same length as the data.",
-        "\nProblems: ", paste(aesthetics[wrong], collapse = ", "), call. = FALSE)
-    }
-
-    if (empty(data) && n > 0) {
-      # No data, and vectors suppled to aesthetics
-      evaled$PANEL <- 1
-    } else {
-      evaled$PANEL <- data$PANEL
-    }
-    data.frame(evaled)
-  }
-
-  calc_statistic <- function(., data, scales) {
-    if (empty(data)) return(data.frame())
-
-    check_required_aesthetics(.$stat$required_aes,
-      c(names(data), names(.$stat_params)),
-      paste("stat_", .$stat$objname, sep=""))
-
-    res <- NULL
-
-    if(!is.null(scales)) {
-      try(res <- do.call(.$stat$calculate_groups, c(
-        list(data=as.name("data"), scales=as.name("scales")),
-        .$stat_params)
-      ))
-
-      if (is.null(res)) return(data.frame())
-    } else {
-      try(res <- do.call(.$stat$calculate_groups.SparkR,
-			 c(list(data = as.name("data"), scales = as.name("scales")), .$stat_params)))
-
-      if(is.null(res)) {
-        stop("Maybe something wrong in calcaulate_groups.", call. = FALSE)
-      }
-    }
- 
-    res
-  }
-
-  map_statistic.SparkR <- function(., data, plot) {
-    aesthetics <- .$mapping
-
-    # Assemble aesthetics from layer, plot and stat mappings
-    if(.$inherit.aes) {
+  map_statistic_SparkR = function(self, data, plot) {
+    aesthetics <- self$mapping
+    if(self$inherit.aes) {
       aesthetics <- defaults(aesthetics, plot$mapping)
     }
-    aesthetics <- defaults(aesthetics, .$stat$default_aes())
+    aesthetics <- defaults(aesthetics, self$stat$default_aes)
     aesthetics <- compact(aesthetics)
 
-    new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
-
+    new <- ggplot2:::strip_dots(aesthetics[ggplot2:::is_calculated_aes(aesthetics)])
     if(length(new) == 0) return(data)
 
-    # Add map stat output to aesthetics
     data <- withColumn(data, names(new), data[[as.character(new)]])
-    # Add any new scales, if needed
-    scales_add_defaults(plot$scales, data, new, plot$plot_env)
+    scales_add_defaults_SparkR(plot$scales, data, new, plot$plot_env)
+
+    if(self$stat$retransform) {
+      data <- scales_transform_df_SparkR(plot$scales, data)
+    }
+    data
+  },
+
+  compute_geom_1 = function(self, data) {
+    data <- self$geom$setup_data(data, c(self$geom_params, self$aes_params))
 
     data
+  },
+
+  compute_position = function(self, data, panel) {
+    params <- self$position$setup_params(data)
+    data <- self$position$setup_data(data, params)
+
+    self$position$compute_layer(data, params, panel)
+  },
+
+  compute_geom_2 = function(self, data) {
+    self$geom$use_defaults(data, self$aes_params)
+  },
+
+  draw_geom = function(self, data, panel, coord) {
+    data <- self$geom$handle_na(data, self$geom_params)
+    self$geom$draw_layer(data, self$geom_params, panel, coord)
   }
+)
 
-  map_statistic <- function(., data, plot) {
-    if (empty(data)) return(data.frame())
+find_subclass_SparkR <- function(super, class) {
+  name <- paste0(super, ggplot2:::camelize(class, first = TRUE), "_SparkR")
 
-    # Assemble aesthetics from layer, plot and stat mappings
-    aesthetics <- .$mapping
-    if (.$inherit.aes) {
-      aesthetics <- defaults(aesthetics, plot$mapping)
-    }
-    aesthetics <- defaults(aesthetics, .$stat$default_aes())
-    aesthetics <- compact(aesthetics)
-
-    new <- strip_dots(aesthetics[is_calculated_aes(aesthetics)])
- 
-    if (length(new) == 0) return(data)
-
-    # Add map stat output to aesthetics
-    stat_data <- as.data.frame(lapply(new, eval, data, baseenv()))
-    names(stat_data) <- names(new)
-
-    # Add any new scales, if needed
-    scales_add_defaults(plot$scales, data, new, plot$plot_env)
-
-    # Transform the values, if the scale say it's ok
-    # (see stat_spoke for one exception)
-    if (.$stat$retransform) {
-      stat_data <- scales_transform_df(plot$scales, stat_data)
-    }
-
-    cunion(stat_data, data)
+  obj <- get(name)
+  if (!inherits(obj, super)) {
+    stop("Found object is not a ", tolower(super), ".", call. = FALSE)
   }
-
-  reparameterise.SparkR <- function(., data) {
-    if(is.null(data)) stop("data is empty.", call. = FALSE)
-    .$geom$reparameterise.SparkR(data, .$geom_params)
-  }
-
-  reparameterise <- function(., data) {
-    if (empty(data)) return(data.frame())
-    .$geom$reparameterise(data, .$geom_params)
-  }
-
-  adjust_position <- function(., data) {
-    ddply(data, "PANEL", function(data) {
-      .$position$adjust(data)
-    })
-  }
-
-  make_grob <- function(., data, scales, cs) {
-    if (empty(data)) return(zeroGrob())
-
-    data <- .$use_defaults(data)
-
-    check_required_aesthetics(.$geom$required_aes,
-      c(names(data), names(.$geom_params)),
-      paste("geom_", .$geom$objname, sep=""))
-
-    do.call(.$geom$draw_groups, c(
-      data = list(as.name("data")),
-      scales = list(as.name("scales")),
-      coordinates = list(as.name("cs")),
-      .$geom_params
-    ))
-  }
-
-  class <- function(.) "layer"
-})
-
-#' Create a new layer
-#'
-#' @keywords internal
-#' @export
-layer <- Layer$new
+  obj
+}

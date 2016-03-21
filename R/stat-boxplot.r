@@ -1,141 +1,102 @@
-#' Calculate components of box and whisker plot.
-#'
-#' @param coef length of the whiskers as multiple of IQR.  Defaults to 1.5
-#' @param na.rm If \code{FALSE} (the default), removes missing values with
-#'    a warning.  If \code{TRUE} silently removes missing values.
-#' @inheritParams stat_identity
-#' @return A data frame with additional columns:
-#'   \item{width}{width of boxplot}
-#'   \item{ymin}{lower whisker = smallest observation greater than or equal to lower hinge - 1.5 * IQR}
-#'   \item{lower}{lower hinge, 25\% quantile}
-#'   \item{notchlower}{lower edge of notch = median - 1.58 * IQR / sqrt(n)}
-#'   \item{middle}{median, 50\% quantile}
-#'   \item{notchupper}{upper edge of notch = median + 1.58 * IQR / sqrt(n)}
-#'   \item{upper}{upper hinge, 75\% quantile}
-#'   \item{ymax}{upper whisker = largest observation less than or equal to upper hinge + 1.5 * IQR}
-#' @seealso See \code{\link{geom_boxplot}} for examples.
+#' @rdname geom_boxplot
 #' @export
-#' @examples
-#' # See geom_boxplot for examples
-stat_boxplot <- function (mapping = NULL, data = NULL, geom = "boxplot", position = "dodge",
-na.rm = FALSE, coef = 1.5, ...) {
-  StatBoxplot$new(mapping = mapping, data = data, geom = geom,
-  position = position, na.rm = na.rm, coef = coef, ...)
+stat_boxplot <- function(mapping = NULL, data = NULL, geom = "boxplot",
+                         position = "dodge", coef = 1.5, na.rm = FALSE,
+                         show.legend = NA, inherit.aes = TRUE, ...) {
+  layer1 <- layer(
+    data = data,
+    mapping = mapping,
+    stat = StatBoxplot,
+    geom = geom,
+    position = position,
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      na.rm = na.rm,
+      coef = coef,
+      ...
+    )
+  )
+  
+  layer2 <- layer_SparkR(
+    data = data,
+    mapping = mapping,
+    stat = StatBoxplot_SparkR,
+    geom = geom,
+    position = position,
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      na.rm = na.rm,
+      coef = coef,
+      ...
+    )
+  )
+
+  return(list(layer1, layer2))
 }
 
-StatBoxplot <- proto(Stat, {
-  objname <- "boxplot"
+#' @rdname ggplot2-ggproto
+#' @format NULL
+#' @usage NULL
+#' @export
+StatBoxplot_SparkR <- ggproto("StatBoxplot_SparkR", Stat_SparkR,
+  required_aes = ggplot2::StatBoxplot$required_aes,
+  non_missing_aes = "weight",
 
-  required_aes <- c("x", "y")
-  default_geom <- function(.) GeomBoxplot
+  setup_params = function(data, params) {
+    params$width <- if(!is.null(params$width)) params@width else 1 * 0.75
 
-  calculate_groups <- function(., data, na.rm = FALSE, width = NULL, ...) {
-    data <- remove_missing(data, na.rm, c("x", "y", "weight"), name="stat_boxplot",
-      finite = TRUE)
-    data$weight <- data$weight %||% 1
-    width <- width %||%  resolution(data$x) * 0.75
+    params
+  },
 
-    .super$calculate_groups(., data, na.rm = na.rm, width = width, ...)
-  }
-
-  calculate_groups.SparkR <- function(., data, na.rm = FALSE, width = NULL, ...) {
-    width <- width %||% 1 * 0.75
-
-    .super$calculate_groups(., data, na.rm = na.rm, width = width, ...)
-  }
-
-  calculate <- function(., data, scales, width=NULL, na.rm = FALSE, coef = 1.5, ...) {
-    with(data, {
-      qs <- c(0, 0.25, 0.5, 0.75, 1)
-      if (length(unique(weight)) != 1) {
-        try_require("quantreg")
-        stats <- as.numeric(coef(rq(y ~ 1, weights = weight, tau=qs)))
-      } else {
-        stats <- as.numeric(quantile(y, qs))
-      }
-      names(stats) <- c("ymin", "lower", "middle", "upper", "ymax")
-      iqr <- diff(stats[c(2, 4)])
-      outliers <- y < (stats[2] - coef * iqr) | y > (stats[4] + coef * iqr)
-
-      if (any(outliers)) {
-        stats[c(1, 5)] <- range(c(stats[2:4], y[!outliers]), na.rm=TRUE)
-      }
-
-      if (length(unique(x)) > 1) width <- diff(range(x)) * 0.9
-
-      df <- as.data.frame(as.list(stats))
-      df$outliers <- I(list(y[outliers]))
-
-      if (is.null(weight)) {
-        n <- sum(!is.na(y))
-      } else {
-        # Sum up weights for non-NA positions of y and weight
-        n <- sum(weight[!is.na(y) & !is.na(weight)])
-      }
-
-      df$notchupper <- df$middle + 1.58 * iqr / sqrt(n)
-      df$notchlower <- df$middle - 1.58 * iqr / sqrt(n)
-
-      transform(df,
-        x = if (is.factor(x)) x[1] else mean(range(x)),
-        width = width,
-        relvarwidth = sqrt(n)
-      )
-    })
-  }
-
-  calculate.SparkR <- function(., data, scales, width=NULL, na.rm=FALSE, coef=1.5, ...) {
+  compute_group = function(data, scales, width = NULL, na.rm = FALSE, coef = 1.5) {
     qs <- c(0, 0.25, 0.5, 0.75, 1)
     column_fill <- length(grep("fill", columns(data)))
 
     if(column_fill) {
-      distinct_data <- collect(distinct(select(data, "x", "PANEL", "fill")))
+      distinct_data <- collect(distinct(select(data, "x", "PANEL", "fill", "group")))
     } else {
-      distinct_data <- collect(distinct(select(data, "x", "PANEL")))
+      distinct_data <- collect(distinct(select(data, "x", "PANEL", "group")))
     }
 
     for(i in 1:nrow(distinct_data)) {
       if(column_fill) {
         y <- SparkR::filter(data, data$x == distinct_data$x[i] &
-			    data$PANEL == distinct_data$PANEL[i] &
-			    data$fill == distinct_data$fill[i])
+			data$PANEL == distinct_data$PANEL[i] &
+			data$fill == distinct_data$fill[i] &
+			data$group == distinct_data$group[i])
       } else {
         y <- SparkR::filter(data, data$x == distinct_data$x[i] & 
-			    data$PANEL == distinct_data$PANEL[i])
+			data$PANEL == distinct_data$PANEL[i] &
+			data$group == distinct_data$group[i])
       }
-
       y <- collect(SparkR::arrange(select(y, "y"), "y"))$y
       stats <- as.numeric(quantile(y, qs))
       names(stats) <- c("ymin", "lower", "middle", "upper", "ymax")
-
       iqr <- diff(stats[c(2, 4)])
       outliers <- y < (stats[2] - coef * iqr) | y > (stats[4] + coef * iqr)
 
       if(any(outliers)) {
         stats[c(1, 5)] <- range(c(stats[2:4], y[!outliers]), na.rm = TRUE)
       }
-
+      
       df <- as.data.frame(as.list(stats))
       df$outliers <- I(list(y[outliers]))
-
       n <- sum(!is.na(y))
-
       df$notchupper <- df$middle + 1.58 * iqr / sqrt(n)
       df$notchlower <- df$middle - 1.58 * iqr / sqrt(n)
       df$relvarwidth <- sqrt(n)
-
+      
       distinct <- cbind(distinct_data[i, ], df)
-
       if(i > 1) box <- rbind(box, distinct) else box <- distinct
     }
-
+    
     outliers <- box[c("x", "outliers")]
     box$outliers <- NULL
-
     data <- createDataFrame(sqlContext, box)
-    persist(data, "MEMORY_ONLY")
     data <- SparkR::mutate(data, width = lit(width), weight = lit(1))
-
+    
     list(outliers, data)
   }
-})
+)

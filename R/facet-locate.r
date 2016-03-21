@@ -3,66 +3,20 @@
 # levels and for margins.
 #
 # @params data a data frame
-locate_grid <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE) {
-  if (empty(data)) {
-    return(cbind(data, PANEL = integer(0)))
-  }
-  
-  rows <- as.quoted(rows)
-  cols <- as.quoted(cols)
-  vars <- c(names(rows), names(cols))
-
-  # Compute facetting values and add margins
-  margin_vars <- list(intersect(names(rows), names(data)),
-    intersect(names(cols), names(data)))
-  data <- add_margins(data, margin_vars, margins)
-  facet_vals <- quoted_df(data, c(rows, cols))
-  
-  # If any facetting variables are missing, add them in by
-  # duplicating the data
-  missing_facets <- setdiff(vars, names(facet_vals))
-  if (length(missing_facets) > 0) {
-    to_add <- unique(panels[missing_facets])
-
-    data_rep <- rep.int(1:nrow(data), nrow(to_add))
-    facet_rep <- rep(1:nrow(to_add), each = nrow(data))
-
-    data <- unrowname(data[data_rep, , drop = FALSE])
-    facet_vals <- unrowname(cbind(
-      facet_vals[data_rep, ,  drop = FALSE],
-      to_add[facet_rep, , drop = FALSE]))
-  }
-
-  # Add PANEL variable
-  if (nrow(facet_vals) == 0) {
-    # Special case of no facetting
-    data$PANEL <- 1
-  } else {
-    facet_vals[] <- lapply(facet_vals[], as.factor)
-    facet_vals[] <- lapply(facet_vals[], addNA, ifany = TRUE)
-
-    keys <- join.keys(facet_vals, panels, by = vars)
-
-    data$PANEL <- panels$PANEL[match(keys$x, keys$y)]
-  }
-  
-  data[order(data$PANEL), , drop = FALSE]
-}
-
-locate_grid.SparkR <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE) {
+locate_grid_SparkR <- function(data, panels, rows = NULL, cols = NULL, margins = FALSE) {
   rows_char <- as.character(rows)
   cols_char <- as.character(cols)
-  
   rows_is_null <- length(rows_char) == 0
   cols_is_null <- length(cols_char) == 0
-
+  
+  colnames <- names(data)
+  
   # Add PANEL variable 
   if(!rows_is_null && !cols_is_null) {
     panels <- SparkR::rename(panels, row_old = panels[[rows_char]], col_old = panels[[cols_char]])
-
     data <- SparkR::join(panels, data, 
-    			 panels$row_old == data[[rows_char]] &
-			 panels$col_old == data[[cols_char]], "inner")
+      panels$row_old == data[[rows_char]] &
+      panels$col_old == data[[cols_char]], "inner")
   } else if(!rows_is_null) {
     panels <- withColumnRenamed(panels, eval(rows_char), "row_old")
     data <- SparkR::join(panels, data, panels$row_old == data[[rows_char]], "inner")
@@ -70,45 +24,17 @@ locate_grid.SparkR <- function(data, panels, rows = NULL, cols = NULL, margins =
     panels <- withColumnRenamed(panels, eval(cols_char), "col_old")
     data <- SparkR::join(panels, data, panels$col_old == data[[cols_char]], "inner")
   }
-
-  # Return with unnessary columns (col_old, row_old, COL, ROW)
-  data
+  
+  # Return with unnessary columns (col_old, row_old, COL, ROW
+  select(data, append(as.list(colnames), "PANEL"))
 }
 
-locate_wrap <- function(data, panels, vars) {
-  if (empty(data)) {
-    return(cbind(data, PANEL = integer(0)))
-  }
-  vars <- as.quoted(vars)
-
-  facet_vals <- quoted_df(data, vars)
-  facet_vals[] <- lapply(facet_vals[], as.factor)
-
-  missing_facets <- setdiff(names(vars), names(facet_vals))
-  if (length(missing_facets) > 0) {
-
-    to_add <- unique(panels[missing_facets])
-
-    data_rep <- rep.int(1:nrow(data), nrow(to_add))
-    facet_rep <- rep(1:nrow(to_add), each = nrow(data))
-
-    data <- unrowname(data[data_rep, , drop = FALSE])
-    facet_vals <- unrowname(cbind(
-      facet_vals[data_rep, ,  drop = FALSE],
-      to_add[facet_rep, , drop = FALSE]))
-  }
-
-  keys <- join.keys(facet_vals, panels, by = names(vars))
-
-  data$PANEL <- panels$PANEL[match(keys$x, keys$y)]
-  data[order(data$PANEL), ]
-}
-
-locate_wrap.SparkR <- function(data, panels, vars) {
+locate_wrap_SparkR <- function(data, panels, vars) {
   vars <- as.character(unlist(vars))
-  panels <- withColumnRenamed(panels, eval(vars), "init")
+  colname <- names(data)
 
-  data <- SparkR::join(data, panels, data[[eval(vars)]] == panels$init, "inner")
+  panels <- withColumnRenamed(panels, vars, "id")
+  data <- SparkR::join(data, panels, data[[vars]] == panels$id, "inner")
 
-  data
+  select(data, append(as.list(colname), "PANEL"))
 }
