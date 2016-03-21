@@ -6,9 +6,9 @@ stat_bin_2d <- function(mapping = NULL, data = NULL, geom = "tile",
 		        position = "identity", bins = 30, binwidth = NULL,
 			deop = TRUE, na.rm = FALSE,
 			show.legend = NA, inherit.aes = TRUE, ...) {
-  layer1 <- ggplot2::layer(
+  layer1 <- layer(
     data = data,
-    stat = ggplot2::StatBin2d,
+    stat = StatBin2d,
     geom = geom,
     position = position,
     show.legend = show.legend,
@@ -50,9 +50,9 @@ stat_bin2d <- stat_bin_2d
 # @format NULL
 # @usage NULL
 #' @export
-StatBin2d_SparkR <- ggplot2::ggproto("StatBin2d_SparkR", Stat_SparkR,
+StatBin2d_SparkR <- ggproto("StatBin2d_SparkR", Stat_SparkR,
   required_aes = c("x", "y"),
-  default_aes = ggplot2::aes(fill = ..count..),
+  default_aes = aes(fill = ..count..),
 
   compute_group = function(data, scales, binwidth = NULL, bins = 30,
   			   breaks = NULL, origin = NULL, drop = TRUE) {

@@ -51,7 +51,7 @@ layer_SparkR <- function(geom = NULL, stat = NULL,
   }
   # } to here
 
-  ggplot2::ggproto("LayerInstance", Layer_SparkR,
+  ggproto("LayerInstance", Layer_SparkR,
     geom = geom,
     geom_params = geom_params,
     stat = stat,
@@ -66,7 +66,7 @@ layer_SparkR <- function(geom = NULL, stat = NULL,
   )
 }
 
-Layer_SparkR <- ggplot2::ggproto("Layer", ggplot2:::Layer,
+Layer_SparkR <- ggproto("Layer", ggplot2:::Layer,
   geom = NULL,
   geom_params = NULL,
   stat = NULL,

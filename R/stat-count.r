@@ -3,10 +3,10 @@
 stat_count <- function(mapping = NULL, data = NULL, geom = "bar",
 		     position = "stack", width = NULL, ...,
 		     na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) {
-  layer1 <- ggplot2::layer(
+  layer1 <- layer(
     data = data,
     mapping = mapping,
-    stat = ggplot2::StatCount,
+    stat = StatCount,
     geom = geom,
     position = position,
     show.legend = show.legend,
@@ -41,9 +41,9 @@ stat_count <- function(mapping = NULL, data = NULL, geom = "bar",
 # @usage NULL
 #' @export
 #' @include stat-.r
-StatCount_SparkR <- ggplot2::ggproto("StatCount_SparkR", Stat_SparkR,
+StatCount_SparkR <- ggproto("StatCount_SparkR", Stat_SparkR,
   required_aes = "x",
-  default_aes = ggplot2::aes(y = ..count..),
+  default_aes = aes(y = ..count..),
 
   setup_params = function(data, params) {
     params

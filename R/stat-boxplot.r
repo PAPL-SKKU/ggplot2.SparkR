@@ -3,10 +3,10 @@
 stat_boxplot <- function(mapping = NULL, data = NULL, geom = "boxplot",
                          position = "dodge", coef = 1.5, na.rm = FALSE,
                          show.legend = NA, inherit.aes = TRUE, ...) {
-  layer1 <- ggplot2::layer(
+  layer1 <- layer(
     data = data,
     mapping = mapping,
-    stat = ggplot2::StatBoxplot,
+    stat = StatBoxplot,
     geom = geom,
     position = position,
     show.legend = show.legend,
@@ -40,8 +40,8 @@ stat_boxplot <- function(mapping = NULL, data = NULL, geom = "boxplot",
 # @format NULL
 # @usage NULL
 #' @export
-StatBoxplot_SparkR <- ggplot2::ggproto("StatBoxplot_SparkR", Stat_SparkR,
-  required_aes = ggplot2::StatBoxplot$required_aes,
+StatBoxplot_SparkR <- ggproto("StatBoxplot_SparkR", Stat_SparkR,
+  required_aes = StatBoxplot$required_aes,
   non_missing_aes = "weight",
 
   setup_params = function(data, params) {

@@ -5,7 +5,7 @@ stat_bin <- function(mapping = NULL, data = NULL, geom = "bar",
                      right = FALSE, binwidth = NULL, bins = NULL, origin = NULL,
                      breaks = NULL, na.rm = FALSE,
                      show.legend = NA, inherit.aes = TRUE, ...) {
-  layer1 <- ggplot2::layer(
+  layer1 <- layer(
     data = data, mapping = mapping, stat = StatBin,
     geom = geom, position = position, show.legend = show.legend,
     inherit.aes = inherit.aes,
@@ -36,9 +36,9 @@ stat_bin <- function(mapping = NULL, data = NULL, geom = "bar",
 # @format NULL
 # @usage NULL
 #' @export
-StatBin_SparkR <- ggplot2::ggproto("StatBin_SparkR", Stat_SparkR,
+StatBin_SparkR <- ggproto("StatBin_SparkR", Stat_SparkR,
   required_aes = c("x"),
-  default_aes = ggplot2::aes(y = ..count..),
+  default_aes = aes(y = ..count..),
   
   setup_params = function(data, params) {
     if(length(check_type(data, "x", "integer")) != 0) {

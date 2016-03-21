@@ -2,7 +2,7 @@
 # @format NULL
 # @usage NULL
 #' @export
-GeomTile_SparkR <- ggplot2::ggproto("GeomTile_SparkR", ggplot2::GeomTile,
+GeomTile_SparkR <- ggproto("GeomTile_SparkR", ggplot2::GeomTile,
   setup_data = function(data, params) {
     data
   }

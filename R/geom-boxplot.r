@@ -7,7 +7,7 @@ geom_boxplot <- function(mapping = NULL, data = NULL, stat = "boxplot",
                          outlier.stroke = 0.5, notch = FALSE, notchwidth = 0.5,
                          varwidth = FALSE, na.rm = FALSE,
                          show.legend = NA, inherit.aes = TRUE, ...) {
-  layer1 <- ggplot2::layer(
+  layer1 <- layer(
     data = data,
     mapping = mapping,
     stat = stat,
@@ -56,7 +56,7 @@ geom_boxplot <- function(mapping = NULL, data = NULL, stat = "boxplot",
 # @format NULL
 # @usage NULL
 #' @export
-GeomBoxplot_SparkR <- ggplot2::ggproto("GeomBoxplot_SparkR", ggplot2::GeomBoxplot,
+GeomBoxplot_SparkR <- ggproto("GeomBoxplot_SparkR", GeomBoxplot,
   setup_data = function(data, params) {
     # if `varwidth` not requested or not available, don't use it
     if(is.null(params) || is.null(params$varwidth) ||

@@ -2,7 +2,7 @@
 # @format NULL
 # @usage NULL
 #' @export
-Stat_SparkR <- ggplot2::ggproto("Stat_SparkR", ggplot2::Stat,
+Stat_SparkR <- ggproto("Stat_SparkR", Stat,
   retransform = TRUE,
 
   compute_layer = function(self, data, params, panels) {
