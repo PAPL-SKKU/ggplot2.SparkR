@@ -4,7 +4,7 @@
 geom_bar <- function(mapping = NULL, data = NULL, stat = "count",
                      position = "stack", width = NULL, binwidth = NULL, ...,
 	             na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) {
-  layer1 <- ggplot2::layer(
+  layer1 <- layer(
     data = data,
     mapping = mapping,
     stat = stat,
@@ -41,7 +41,7 @@ geom_bar <- function(mapping = NULL, data = NULL, stat = "count",
 # @format NULL
 # @usage NULL
 #' @export
-GeomBar_SparkR <- ggplot2::ggproto("GeomBar_SparkR", ggplot2::GeomBar,
+GeomBar_SparkR <- ggproto("GeomBar_SparkR", GeomBar,
   setup_data = function(data, params) {
     SparkR::mutate(data, ymin = lit(0), ymax = data$y,
       xmin = data$x - (data$width / 2), xmax = data$x + (data$width / 2))
