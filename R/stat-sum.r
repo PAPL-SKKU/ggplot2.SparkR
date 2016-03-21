@@ -1,84 +1,52 @@
-#' Sum unique values.  Useful for overplotting on scatterplots.
-#'
-#' @inheritParams stat_identity
-#' @return a data.frame with additional columns
-#'  \item{n}{number of observations at position}
-#'  \item{prop}{percent of points in that panel at that position}
 #' @export
-#' @examples
-#' # Generate Spark DataFrame
-#' library(SparkR)
-#' sc <- sparkR.init()
-#' sqlContext <- sparkRSQL.init(sc)
-#' diamonds_df <- createDataFrame(sqlContext, diamonds)
-#'
-#' d <- ggplot(diamonds_ds, aes(cut, clarity))
-#' d + stat_sum()
-#'
-#' d + stat_sum() +
-#'   scale_size_area()
-#'
-#' d <- ggplot(diamonds, aes(x = cut, y = clarity))
-#' d + stat_sum()
-#'
-#' # Always best to use in conjunction with scale_size_area which ensures
-#' # 0 value is mapped to 0 size
-#' d + stat_sum() +
-#'   scale_size_area()
-#'
-#' #' # Can also weight by another variable
-#' d + stat_sum(aes(weight = price)) +
-#'   scale_size_area()
-#'
-#' # Or display proportions instead of counts. By default, all categorical
-#' # variables in the plot form the grouping. Specifying stat_sum with no
-#' # group identifier leads to a plot which is not useful:
-#' d + stat_sum(aes(size = ..prop..))
-#' # To correct this problem and achieve a more desirable plot, we need
-#' # to specify which group the proportion is to be calculated over.
-#' d + stat_sum(aes(size = ..prop.., group = 1)) +
-#'   scale_size_area(max_size = 10)
-#'
-#' # Or group by x/y variables to have rows/columns sum to 1.
-#' d + stat_sum(aes(size = ..prop.., group = cut)) +
-#'   scale_size_area(max_size = 10)
-#' d + stat_sum(aes(size = ..prop.., group = clarity)) +
-#'   scale_size_area(max_size = 10)
-stat_sum <- function (mapping = NULL, data = NULL, geom = "point", position = "identity", ...) {
-  StatSum$new(mapping = mapping, data = data, geom = geom, position = position, ...)
+stat_sum <- function(mapping = NULL, data = NULL, geom = "point",
+                     position = "identity", na.rm = FALSE,
+                     show.legend = NA, inherit.aes = TRUE, ...) {
+  layer1 <- layer(
+    data = data,
+    mapping = mapping,
+    stat = StatSum,
+    geom = geom,
+    position = position,
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      na.rm = na.rm,
+      ...
+    )
+  )
+
+  layer2 <- layer_SparkR(
+    data = data,
+    mapping = mapping,
+    stat = StatSum_SparkR,
+    geom = geom,
+    position = position,
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      na.rm = na.rm,
+      ...
+    )
+  )
+
+  return(list(layer1, layer2))
 }
 
-StatSum <- proto(Stat, {
-  objname <- "sum"
+#' @rdname ggplot2-ggproto
+#' @format NULL
+#' @usage NULL
+#' @export
+StatSum_SparkR <- ggproto("StatSum_SparkR", Stat_SparkR,
+  default_aes = ggplot2::StatSum$default_aes,
+  required_aes = ggplot2::StatSum$required_aes,
 
-  default_aes <- function(.) aes(size = ..n..)
-  required_aes <- c("x", "y")
-  default_geom <- function(.) GeomPoint
-
-  calculate_groups.SparkR <- function(., data, scales, ...) {
-    if(length(grep("fill", columns(data)))) {
-      counts <- SparkR::count(groupBy(data, "PANEL", "x", "y", "fill"))
-    } else {
-      counts <- SparkR::count(groupBy(data, "PANEL", "x", "y"))
-    }
-
+  compute_group = function(data, scales) {
+    counts <- SparkR::count(groupBy(data, "PANEL", "x", "y"))
     counts <- SparkR::rename(counts, n = counts$count)
     counts <- withColumn(counts, "prop", counts$n^(-1))
     counts <- select(counts, "PANEL", "x", "y", "n", "prop")
 
     counts
   }
-
-  calculate_groups <- function(., data, scales, ...) {
-
-    if (is.null(data$weight)) data$weight <- 1
-
-    group_by <- setdiff(intersect(names(data), .all_aesthetics), "weight")
-
-    counts <- count(data, group_by, wt_var = "weight")
-    counts <- rename(counts, c(freq = "n"), warn_missing = FALSE)
-    counts$prop <- ave(counts$n, counts$group, FUN = prop.table)
-
-    counts
-  }
-})
+)
