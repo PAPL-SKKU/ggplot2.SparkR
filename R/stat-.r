@@ -1,8 +1,8 @@
-#' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
+# @rdname ggplot2-ggproto
+# @format NULL
+# @usage NULL
 #' @export
-Stat_SparkR <- ggproto("Stat_SparkR", Stat,
+Stat_SparkR <- ggplot2::ggproto("Stat_SparkR", ggplot2::Stat,
   retransform = TRUE,
 
   compute_layer = function(self, data, params, panels) {

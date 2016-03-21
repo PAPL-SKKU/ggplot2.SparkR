@@ -1,5 +1,5 @@
+# @rdname geom_histogram
 #' @export
-#' @rdname geom_histogram
 geom_freqpoly <- function(mapping = NULL, data = NULL, stat = "bin",
 			  position = "identity", na.rm = FALSE,
 			  show.legend = NA, inherit.aes = TRUE, ...) {

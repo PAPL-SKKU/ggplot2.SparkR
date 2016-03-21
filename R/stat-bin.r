@@ -1,11 +1,11 @@
+# @rdname geom_histogram
 #' @export
-#' @rdname geom_histogram
 stat_bin <- function(mapping = NULL, data = NULL, geom = "bar",
                      position = "stack", width = 0.9, drop = FALSE,
                      right = FALSE, binwidth = NULL, bins = NULL, origin = NULL,
                      breaks = NULL, na.rm = FALSE,
                      show.legend = NA, inherit.aes = TRUE, ...) {
-  layer1 <- layer(
+  layer1 <- ggplot2::layer(
     data = data, mapping = mapping, stat = StatBin,
     geom = geom, position = position, show.legend = show.legend,
     inherit.aes = inherit.aes,
@@ -32,13 +32,13 @@ stat_bin <- function(mapping = NULL, data = NULL, geom = "bar",
   return(list(layer1, layer2))
 }
 
-#' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
+# @rdname ggplot2-ggproto
+# @format NULL
+# @usage NULL
 #' @export
-StatBin_SparkR <- ggproto("StatBin_SparkR", Stat_SparkR,
+StatBin_SparkR <- ggplot2::ggproto("StatBin_SparkR", Stat_SparkR,
   required_aes = c("x"),
-  default_aes = aes(y = ..count..),
+  default_aes = ggplot2::aes(y = ..count..),
   
   setup_params = function(data, params) {
     if(length(check_type(data, "x", "integer")) != 0) {

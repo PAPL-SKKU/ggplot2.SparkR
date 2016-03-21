@@ -1,5 +1,5 @@
-#' Create a new layer
-#'
+# Create a new layer
+#
 #' @export
 layer_SparkR <- function(geom = NULL, stat = NULL,
 			 data = NULL, mapping = NULL,
@@ -51,7 +51,7 @@ layer_SparkR <- function(geom = NULL, stat = NULL,
   }
   # } to here
 
-  ggproto("LayerInstance", Layer_SparkR,
+  ggplot2::ggproto("LayerInstance", Layer_SparkR,
     geom = geom,
     geom_params = geom_params,
     stat = stat,
@@ -66,7 +66,7 @@ layer_SparkR <- function(geom = NULL, stat = NULL,
   )
 }
 
-Layer_SparkR <- ggproto("Layer", ggplot2:::Layer,
+Layer_SparkR <- ggplot2::ggproto("Layer", ggplot2:::Layer,
   geom = NULL,
   geom_params = NULL,
   stat = NULL,

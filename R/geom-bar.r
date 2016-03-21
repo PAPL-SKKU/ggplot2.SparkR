@@ -1,10 +1,10 @@
-#' Bars, rectangles with bases on x-axis
-#'
+# Bars, rectangles with bases on x-axis
+#
 #' @export
 geom_bar <- function(mapping = NULL, data = NULL, stat = "count",
-                    position = "stack", width = NULL, binwidth = NULL, ...,
-		    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) {
-  layer1 <- layer(
+                     position = "stack", width = NULL, binwidth = NULL, ...,
+	             na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) {
+  layer1 <- ggplot2::layer(
     data = data,
     mapping = mapping,
     stat = stat,
@@ -37,11 +37,11 @@ geom_bar <- function(mapping = NULL, data = NULL, stat = "count",
   return(list(layer1, layer2))
 }
 
-#' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
+# @rdname ggplot2-ggproto
+# @format NULL
+# @usage NULL
 #' @export
-GeomBar_SparkR <- ggproto("GeomBar_SparkR", GeomBar,
+GeomBar_SparkR <- ggplot2::ggproto("GeomBar_SparkR", ggplot2::GeomBar,
   setup_data = function(data, params) {
     SparkR::mutate(data, ymin = lit(0), ymax = data$y,
       xmin = data$x - (data$width / 2), xmax = data$x + (data$width / 2))

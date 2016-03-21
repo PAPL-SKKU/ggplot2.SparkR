@@ -1,14 +1,14 @@
-#' Count number of observation in rectangular bins.
-#'
+# Count number of observation in rectangular bins.
+#
+# @rdname geom_bin2d
 #' @export
-#' @rdname geom_bin2d
 stat_bin_2d <- function(mapping = NULL, data = NULL, geom = "tile",
 		        position = "identity", bins = 30, binwidth = NULL,
 			deop = TRUE, na.rm = FALSE,
 			show.legend = NA, inherit.aes = TRUE, ...) {
-  layer1 <- layer(
+  layer1 <- ggplot2::layer(
     data = data,
-    stat = StatBin2d,
+    stat = ggplot2::StatBin2d,
     geom = geom,
     position = position,
     show.legend = show.legend,
@@ -41,18 +41,18 @@ stat_bin_2d <- function(mapping = NULL, data = NULL, geom = "tile",
   return(list(layer1, layer2))
 }
 
+# @rdname geom_bin2d
+# @usage NULL
 #' @export
-#' @rdname geom_bin2d
-#' @usage NULL
 stat_bin2d <- stat_bin_2d
 
-#' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
+# @rdname ggplot2-ggproto
+# @format NULL
+# @usage NULL
 #' @export
-StatBin2d_SparkR <- ggproto("StatBin2d_SparkR", Stat_SparkR,
+StatBin2d_SparkR <- ggplot2::ggproto("StatBin2d_SparkR", Stat_SparkR,
   required_aes = c("x", "y"),
-  default_aes = aes(fill = ..count..),
+  default_aes = ggplot2::aes(fill = ..count..),
 
   compute_group = function(data, scales, binwidth = NULL, bins = 30,
   			   breaks = NULL, origin = NULL, drop = TRUE) {

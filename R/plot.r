@@ -1,13 +1,7 @@
-#' Create a new ggplot plot.
-#'
 #' @export
-ggplot <- ggplot2::ggplot
-
-#' @export
-#' @rdname ggplot
-#' @usage NULL
+#' @method ggplot DataFrame
 ggplot.DataFrame <- function(data, mapping = aes(), ...,
-			     environment = parent.frame()) {
+			     environment = getNamespace("ggplot2.SparkR")) {
   if (!missing(mapping) && !inherits(mapping, "uneval")) {
     stop("Mapping should be created with aes or aes_string")
   }
@@ -29,16 +23,6 @@ ggplot.DataFrame <- function(data, mapping = aes(), ...,
   p
 }
 
-#' Draw plot on current graphics device.
-#'
-#' @param x plot to display
-#' @param newpage draw new (empty) page first?
-#' @param vp viewport to draw plot in
-#' @param ... other arguments not used by this method
-#' @keywords hplot
-#' @return Invisibly returns the result of \code{\link{ggplot_build_SparkR}}, which
-#'   is a list with components that contain the plot itself, the data,
-#'   information about the scales, panels etc.
 #' @export
 #' @method print ggplot_SparkR
 print.ggplot_SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
@@ -65,7 +49,6 @@ print.ggplot_SparkR <- function(x, newpage = is.null(vp), vp = NULL, ...) {
   invisible(data)
 }
 
-#' @rdname print.ggplot_SparkR
 #' @method plot ggplot_SparkR
 #' @export
 plot.ggplot_SparkR <- print.ggplot_SparkR

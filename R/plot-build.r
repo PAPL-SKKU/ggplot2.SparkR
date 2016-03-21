@@ -1,5 +1,5 @@
-#' Build ggplot for rendering.
-#'
+# Build ggplot for rendering.
+#
 #' @export
 ggplot_build_SparkR <- function(plot) {
   plot <- ggplot2:::plot_clone(plot)

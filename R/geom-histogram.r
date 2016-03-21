@@ -1,9 +1,9 @@
-#' Histograms and frequency polygons.
-#'
-#' Display a 1d distribution by dividing into bins and counting the number
-#' of observations in each bin. Histograms use bars; frequency polygons use
-#' lines.
-#'
+# Histograms and frequency polygons.
+#
+# Display a 1d distribution by dividing into bins and counting the number
+# of observations in each bin. Histograms use bars; frequency polygons use
+# lines.
+#
 #' @export
 geom_histogram <- function(mapping = NULL, data = NULL, stat = "bin",
                           binwidth = NULL, bins = NULL, origin = NULL,

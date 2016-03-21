@@ -2,10 +2,10 @@
 stat_sum <- function(mapping = NULL, data = NULL, geom = "point",
                      position = "identity", na.rm = FALSE,
                      show.legend = NA, inherit.aes = TRUE, ...) {
-  layer1 <- layer(
+  layer1 <- ggplot2::layer(
     data = data,
     mapping = mapping,
-    stat = StatSum,
+    stat = ggplot2::StatSum,
     geom = geom,
     position = position,
     show.legend = show.legend,
@@ -33,11 +33,11 @@ stat_sum <- function(mapping = NULL, data = NULL, geom = "point",
   return(list(layer1, layer2))
 }
 
-#' @rdname ggplot2-ggproto
-#' @format NULL
-#' @usage NULL
+# @rdname ggplot2-ggproto
+# @format NULL
+# @usage NULL
 #' @export
-StatSum_SparkR <- ggproto("StatSum_SparkR", Stat_SparkR,
+StatSum_SparkR <- ggplot2::ggproto("StatSum_SparkR", Stat_SparkR,
   default_aes = ggplot2::StatSum$default_aes,
   required_aes = ggplot2::StatSum$required_aes,
 
